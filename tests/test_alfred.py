@@ -63,9 +63,24 @@ def test_add_row_says_when_the_node_is_new(home):
     assert "(new node)" in result["items"][0]["title"], "adding into a missing node says so"
 
 
-def test_empty_query_browses_everything(home):
+def test_empty_query_lists_root_folders_then_everything(home):
     result = home.items("")
-    assert len(result["items"]) == 7 + 1, "every record plus Add"
+    assert titles(result)[:2] == ["body/", "work/"], "the root's folders come first, sorted"
+    assert len(result["items"]) == 2 + 7 + 1, "then every record, then Add"
+    assert "work/k8s/" not in titles(result), "only direct children, not grandchildren"
+
+
+def test_empty_query_inside_a_node_lists_its_folders(home):
+    result = home.items("work/")
+    assert titles(result)[0] == "work/k8s/", "inside work/, its own folders come first"
+
+
+def test_empty_folders_are_listed_too(home):
+    import os
+
+    os.makedirs(os.path.join(home.tree.root, "empty"))
+    row = next(i for i in home.items("")["items"] if i["title"] == "empty/")
+    assert row["subtitle"].startswith("0 records"), "a folder with no records still shows"
 
 
 def test_node_row_offers_autocomplete(home):
@@ -79,7 +94,9 @@ def test_node_row_offers_autocomplete(home):
 
 def test_inside_a_node_only_its_subtree_shows(home):
     result = home.items("work/")
-    assert titles(result) == ["ctx staging", "Add to work/: "], "work/ shows only its subtree"
+    assert titles(result) == ["work/k8s/", "ctx staging", "Add to work/: "], (
+        "work/ shows its folders and its subtree"
+    )
 
 
 def test_fact_row_command_and_subtitle(home):
@@ -132,7 +149,7 @@ def test_no_run_row_without_matches(home):
 def test_max_results_caps_rows(home):
     session = alfred.Session(home.tree, home.journal, alfred.Settings(max_results=2))
     result = session.items("")
-    assert len(result["items"]) == 3, "max_results hits plus Add"
+    assert len(result["items"]) == 2 + 2 + 1, "root folders, max_results hits, Add"
 
 
 def test_act_copy_touches_the_journal(home, mocker):

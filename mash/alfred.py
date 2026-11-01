@@ -13,7 +13,6 @@ class Settings(NamedTuple):
     editor: str = "open -t {file}"
     flows: dict = {}
     max_results: int = 50
-    show_nodes: bool = False
 
 
 def read_clipboard():
@@ -45,15 +44,14 @@ class Session:
         return {"items": rows, "variables": {"prompt": "0"}}
 
     def node_rows(self, query, text):
-        if (
-            query.node
-            or query.add
-            or query.tags
-            or len(query.words) != 1
-            and not self.settings.show_nodes
-        ):
+        if query.add or query.tags or len(query.words) > 1:
             return []
-        prefix = query.words[0].lower() if query.words else ""
+        if not query.words:
+            children = self.tree.children(query.node)
+            return [node_row(child, self.nodes.get(child, 0)) for child in children]
+        if query.node:
+            return []
+        prefix = query.words[0].lower()
         return [
             node_row(node, count)
             for node, count in sorted(self.nodes.items())

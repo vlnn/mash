@@ -96,5 +96,5 @@ def test_settings_come_from_alfred_variables(monkeypatch):
     monkeypatch.setenv("max_results", "7")
     monkeypatch.setenv("editor", "code {file}")
     assert cli.settings() == cli.alfred.Settings(
-        editor="code {file}", flows={"tally": "t", "kobold": "kb"}, max_results=7, show_nodes=False
+        editor="code {file}", flows={"tally": "t", "kobold": "kb"}, max_results=7
     )

@@ -229,7 +229,6 @@ def plist(version, with_space=True):
                 "flows", "Flows", "", "name=keyword aliases for @ hand-offs", "tally=t kobold=kb"
             ),
             variable("max_results", "Max results", "50", "Rows sent to Alfred."),
-            checkbox("show_nodes", "List nodes", "List every node on an empty query."),
         ],
         "variablesdontexport": [],
     }

@@ -77,6 +77,14 @@ class Tree:
                     elif entry.name.endswith(EXTENSION):
                         yield node, entry
 
+    def children(self, node):
+        folder = os.path.join(self.root, *node.split("/")) if node else self.root
+        if not os.path.isdir(folder):
+            return []
+        with os.scandir(folder) as entries:
+            names = sorted(e.name for e in entries if e.is_dir() and not e.name.startswith("."))
+        return [join_node(node, name) for name in names]
+
     def nodes(self):
         counts = {}
         for dirpath, dirnames, filenames in os.walk(self.root):

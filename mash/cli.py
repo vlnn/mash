@@ -41,7 +41,6 @@ def settings():
         editor=setting("editor", "open -t {file}"),
         flows=actions.parse_flows(setting("flows", "")),
         max_results=int(setting("max_results", "50")),
-        show_nodes=setting("show_nodes", "") in ("1", "true", "yes"),
     )
 
 

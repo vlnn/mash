@@ -49,4 +49,4 @@ def test_hotkey_opens_the_filter_with_an_empty_query():
 
 def test_user_configuration_covers_every_setting():
     names = {v["variable"] for v in make_plist.plist("0.0.0")["userconfigurationconfig"]}
-    assert names == {"python", "folder", "editor", "flows", "max_results", "show_nodes"}
+    assert names == {"python", "folder", "editor", "flows", "max_results"}

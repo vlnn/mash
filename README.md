@@ -52,8 +52,8 @@ m weight ~> weight kg                      ↩ a rule: resolving it finds the mo
 m weight                                   ↩ shows and copies 80
 m work/ k8s ctx staging -> kubectl config use-context staging
                                            ↩ adds under the node work/, creating it
-m work/                                    everything in work/
-m                                          everything, most recently touched first
+m work/                                    work/'s folders, then everything in work/
+m                                          the root's folders, then everything, most recently touched first
 ```
 
 `m` is the Alfred keyword; in fish the command is `mash` and takes the same text.
@@ -223,7 +223,7 @@ A plain word matches a tag by the tag rule below (prefix only): `read` finds `#r
 
 | you type | you get | why |
 |---|---|---|
-| `m` | everything, most recently touched first | empty query |
+| `m` | the root's folders, then everything, most recently touched first | empty query |
 | `m prod` | ssh prod web · k8s ctx prod kube | whole word |
 | `m web ssh` | ssh prod web · ssh staging web | any order |
 | `m stg` | ssh staging web · k8s ctx staging kube | letters in order inside *staging* |
@@ -281,13 +281,14 @@ New axes get a new character; an arrow is a tiny composable language and that is
 A term ending in `/` names a node and narrows the search to that subtree:
 
 ```
-m work/                  everything under work/, including work/k8s/
+m                        body/ · work/  ·  then every record
+m work/                  work/k8s/  ·  then everything under work/, including work/k8s/
 m work/ ctx              ctx anywhere under work/
 m work/k8s/ ctx          only in work/k8s/
 m wo                     the node row  work/  ·  then matching records everywhere
 ```
 
-A node row has the 📁 icon and says how many records it holds; ↩ or ⇥ on it puts `work/` into the query. Backspace over the slash to leave. Siblings and ancestors are never searched when a node is named: `work/k8s/ ctx` does not see a `ctx` in `work/`. Nothing shadows anything; if both match a wider query, both show, the better score first.
+An empty query lists the current node's folders first (the root's on a bare `m`, `work/`'s inside `work/`), empty ones included, then the records. A node row has the 📁 icon and says how many records its subtree holds; ↩ or ⇥ on it puts `work/` into the query. Backspace over the slash to leave. Siblings and ancestors are never searched when a node is named: `work/k8s/ ctx` does not see a `ctx` in `work/`. Nothing shadows anything; if both match a wider query, both show, the better score first.
 
 ## Resolving rules
 
@@ -474,7 +475,6 @@ A bare `m` without a space shows Alfred's own results (Mail, Music…) with the 
 | `python` | `/usr/bin/python3` | interpreter, absolute path |
 | `flows` | empty | `name=keyword` aliases for `@` hand-offs |
 | `max_results` | 50 | rows sent to Alfred |
-| `show_nodes` | off | list every node on an empty query |
 
 ## Performance
 
