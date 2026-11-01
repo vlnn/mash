@@ -25,7 +25,7 @@ def score_word(term, record):
     return (
         score_head(term, record.searchable)
         or score_tags("#" + term, record.tags)
-        or score_body(term, record.body)
+        or score_body(term, record.body_words)
     )
 
 
@@ -61,8 +61,8 @@ def score_tag(term, tag):
     return 0
 
 
-def score_body(term, body):
-    return BODY if fuzzy_pattern(term).search(body.lower()) else 0
+def score_body(term, body_words):
+    return BODY if fuzzy_pattern(term).search(body_words) else 0
 
 
 @cache

@@ -60,6 +60,9 @@ def test_tag_prefix_rule(term, tag, expected):
         ("k ctx", "k8s ctx -> x", 14),
         ("", "anything -> x", 0),
         ("prod", "pihole prod finished", 8),
+        ("prod", "grafana -> https://grafana.example.com/d/x", 0),
+        ("grafana", "latency -> https://grafana.example.com/d/x", 1),
+        ("x", "deploy -> deploy@10.0.1.5", 0),
     ],
 )
 def test_record_score(text, line, expected):

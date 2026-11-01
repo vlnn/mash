@@ -4,6 +4,7 @@ from typing import NamedTuple
 FACT_ARROW = "->"
 ARROW = re.compile(r"(?:^|\s)(->|[=~/#]+>)(?=\s|$)")
 WORD_SPLIT = re.compile(r"[\s,]+")
+PUNCTUATION = re.compile(r"[^\w-]+")
 BOX_NEWLINE = re.compile(r"(?<!\\);;")
 ESCAPED_BOX_NEWLINE = "\\;;"
 
@@ -16,6 +17,7 @@ class Record(NamedTuple):
     body: str
     query: str
     searchable: str
+    body_words: str
 
     @property
     def is_rule(self):
@@ -37,12 +39,14 @@ def parse(text):
 
 def fact(head, body):
     words = head_words(head)
-    return Record(head, words, tags_of(words), FACT_ARROW, body, "", searchable(words))
+    return Record(
+        head, words, tags_of(words), FACT_ARROW, body, "", searchable(words), body_words(body)
+    )
 
 
 def rule(head, arrow, query):
     words = head_words(head)
-    return Record(head, words, tags_of(words), arrow, "", query, searchable(words))
+    return Record(head, words, tags_of(words), arrow, "", query, searchable(words), "")
 
 
 def from_box(line):
@@ -88,3 +92,7 @@ def tags_of(words):
 
 def searchable(words):
     return " ".join(w for w in words if not w.startswith("#")).lower()
+
+
+def body_words(body):
+    return PUNCTUATION.sub(" ", body.lower())

@@ -58,5 +58,10 @@ def perform(action):
         subprocess.run(["osascript", "-e", script], check=True)
 
 
+def paste():
+    script = 'tell application "System Events" to keystroke "v" using command down'
+    subprocess.run(["osascript", "-e", script], check=False)
+
+
 def escape(text):
     return text.replace("\\", "\\\\").replace('"', '\\"')
