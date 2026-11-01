@@ -14,7 +14,7 @@ def test_touch_appends_a_tab_separated_line(journal, mocker):
     mocker.patch("mash.journal.now", return_value=1_700_000_000.0)
     journal.touch("work/k8s", "k8 ctx", "copy")
     with open(journal.path, encoding="utf-8") as f:
-        assert f.read() == "1700000000\twork/k8s\tk8 ctx\tcopy\n", (
+        assert f.read() == "1700000000.000\twork/k8s\tk8 ctx\tcopy\n", (
             "a touch should be one tab-separated line"
         )
 
@@ -44,6 +44,14 @@ def test_bad_lines_are_skipped(journal):
     with open(journal.path, "w", encoding="utf-8") as f:
         f.write("garbage\n\n10\t.\ta\tcopy\nnot-a-time\t.\tb\tcopy\n")
     assert journal.touched() == {("", "a"): 10.0}, "unreadable lines should be ignored"
+
+
+def test_two_touches_in_one_second_keep_their_order(journal, mocker):
+    mocker.patch("mash.journal.now", side_effect=[5.001, 5.002])
+    journal.touch("", "first", "add")
+    journal.touch("", "second", "add")
+    touched = journal.touched()
+    assert touched[("", "second")] > touched[("", "first")], "stamps keep milliseconds"
 
 
 def test_forget_drops_every_line_of_a_record(journal):

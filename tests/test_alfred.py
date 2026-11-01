@@ -142,7 +142,7 @@ def test_act_copy_touches_the_journal(home, mocker):
     perform.assert_called_once()
     assert perform.call_args[0][0].target == "ssh deploy@10.0.1.5", "copy the body"
     assert message == "Copied: ssh deploy@10.0.1.5", "the notification shows the value"
-    assert ("", "ssh prod web") in home.journal.touched(), "↩ is a touch"
+    assert ("", "ssh-prod-web") in home.journal.touched(), "↩ is a touch"
 
 
 def test_act_resolves_a_rule_and_touches_every_step(home, mocker):
@@ -151,7 +151,7 @@ def test_act_resolves_a_rule_and_touches_every_step(home, mocker):
     message = home.act(command(row))
     assert message == "weight → weight kg #body → 80", "the chain is shown"
     touched = home.journal.touched()
-    assert ("body", "weight") in touched and ("body", "weight kg #body") in touched, (
+    assert ("body", "weight") in touched and ("body", "weight-kg-body") in touched, (
         "resolution touches the rule and the fact"
     )
 
@@ -194,11 +194,11 @@ def test_act_with_values_fills_then_copies(home, mocker):
 
 def test_act_delete_removes_file_and_journal(home, mocker):
     row = home.items("prod")["items"][0]
-    home.journal.touch("", "ssh prod web", "copy")
+    home.journal.touch("", "ssh-prod-web", "copy")
     message = home.act(command(row, "alt"))
     assert message == "Deleted: ssh prod web"
     assert titles(home.items("prod")) == ["Add: prod"], "the record is gone"
-    assert ("", "ssh prod web") not in home.journal.touched(), "and so is its history"
+    assert ("", "ssh-prod-web") not in home.journal.touched(), "and so is its history"
 
 
 def test_act_edit_runs_the_editor(home, mocker):

@@ -19,6 +19,14 @@ def test_best_prints_resolved_body(home, capsys):
     assert capsys.readouterr().out == "80\n", "a rule is resolved before printing"
 
 
+def test_best_fills_date_in_the_printed_body(home, capsys, mocker):
+    mocker.patch("mash.fill.today", return_value="2026-11-01")
+    cli.main(["add", "stamp -> {{date}} note {{other}}"])
+    capsys.readouterr()
+    cli.main(["stamp"])
+    assert capsys.readouterr().out == "2026-11-01 note {{other}}\n", "date fills, other blanks stay"
+
+
 def test_miss_exits_one(home, capsys):
     assert cli.main(["zzz"]) == 1, "no hit exits 1"
     assert capsys.readouterr().out == "", "and prints nothing"

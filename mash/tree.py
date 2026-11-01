@@ -15,6 +15,14 @@ class Stored(NamedTuple):
     path: str
     mtime: float
 
+    @property
+    def name(self):
+        return os.path.basename(self.path)[: -len(EXTENSION)]
+
+    @property
+    def identity(self):
+        return self.node, self.name
+
 
 class Tree:
     def __init__(self, root):

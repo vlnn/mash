@@ -67,7 +67,7 @@ class Journal:
 
 
 def format_line(stamp, node, head, action):
-    return f"{int(stamp)}\t{node or ROOT}\t{head}\t{action}\n"
+    return f"{stamp:.3f}\t{node or ROOT}\t{head}\t{action}\n"
 
 
 def parse_line(raw):

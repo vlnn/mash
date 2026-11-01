@@ -66,7 +66,7 @@ Everything lives under one folder, `~/.mash` by default.
 - A **record** is a `*.txt` file. Its first line is the head and the arrow; the rest is the body.
 - A **subfolder** is a child node. Nesting is unlimited.
 - A node exists exactly when its folder does. Adding under `work/k8s/` creates the folders on the way.
-- A **record's identity** is its node path plus its head words. That is what the journal refers to. Rename the head and the record's history starts over.
+- A **record's identity** is its node path plus its file name. That is what the journal refers to, so editing a head keeps the record's history and renaming the file starts it over. Two records with the same head are two records.
 - The **file name** is derived from the head: lowercase, words joined by `-`, anything that is not a letter, digit or `-` dropped, `#` tags kept as words (`weight kg #body` → `weight-kg-body.txt`), `-2`, `-3` appended on collision. It is a convenience for you and your editor, never read by search. Edit the head inside the file and mash renames the file the next time it writes that record.
 
 ```
@@ -372,13 +372,15 @@ Only a leading or trailing `@word` is a hand-off, so `me@example.com` copies as 
 
 ## The journal
 
-`~/.mash/.journal.log` is an append-only file with one line per **touch**: every ↩, ⇧↩, add, and resolution step, as `time ␉ node/path ␉ head words ␉ action`.
+`~/.mash/.journal.log` is an append-only file with one line per **touch**: every ↩, ⇧↩, add, and resolution step, as `seconds ␉ node ␉ file name ␉ action`.
 
 ```
-2026-11-01T14:05:12	work/k8s	k8 ctx	copy
-2026-11-01T14:06:40	.	weight	resolve
-2026-11-01T14:06:40	body	weight kg #body	copy
+1793528884.768	work/k8s	k8-ctx	copy
+1793528884.887	body	weight	resolve
+1793528884.887	body	weight-kg-body	copy
 ```
+
+Resolving a rule touches every step, including the fact it lands on. So after `weight ~> weight kg` has returned the oldest weight, that record is the most recently touched one, and `weight now => weight kg` returns it too until something else is touched. Reading through a rule is a use, and the time axis is about use; if you want the time axis to mean "created", that is the parked journal-as-body idea below.
 
 It is what the time axis reads: a record's time is its last journal line, or its file's modification time if it has none. Records never carry timestamps themselves, so files stay clean to hand-edit, and a tree with no journal still searches, newest file first.
 
@@ -398,7 +400,7 @@ mash forget --node work/k8s/    removes a node: its folder, and every journal li
 mash forget --journal prod web  keeps the record, drops its history (it becomes "untouched")
 ```
 
-`forget` prints what it is about to remove and waits for `y`. Records are matched by head, so a file whose head changed since the search is reported, not clobbered.
+`forget` prints what it is about to remove and waits for `y`. Before deleting, the file's head is compared with what the search saw, so a file edited since is reported, not clobbered.
 
 ## Command line
 

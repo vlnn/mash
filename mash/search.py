@@ -24,8 +24,4 @@ def search(stored_records, query, touched=None):
 
 
 def time_of(stored, touched):
-    return touched.get(identity(stored), stored.mtime)
-
-
-def identity(stored):
-    return stored.node, stored.record.head
+    return touched.get(stored.identity, stored.mtime)
