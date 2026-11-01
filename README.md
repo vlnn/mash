@@ -15,6 +15,8 @@ m stg k8
   ↩ copy / open / resolve / add   ⇧↩ paste   ⌘↩ edit   ⌥↩ delete
 ```
 
+See also `DESIGN.md`: what each feature is for, one example each, and how they combine.
+
 ## Contents
 
 - [Quick start](#quick-start)
