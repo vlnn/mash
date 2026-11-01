@@ -13,32 +13,31 @@ class Journal:
     def __init__(self, path):
         self.path = path
 
-    def touch(self, node, head, action):
+    def touch(self, identity, action, node=""):
         with open(self.path, "a", encoding="utf-8") as f:
-            f.write(format_line(now(), node, head, action))
+            f.write(format_line(now(), identity, node, action))
         if self.probably_long() and self.line_count() > COMPACT_AT:
             self.compact()
 
     def touched(self):
         latest = {}
-        for stamp, node, head, _ in self.lines():
-            latest[(node, head)] = max(stamp, latest.get((node, head), 0.0))
+        for stamp, identity, _, _ in self.lines():
+            latest[identity] = max(stamp, latest.get(identity, 0.0))
         return latest
 
-    def forget(self, node, head):
-        self.rewrite(lambda line: (line[1], line[2]) != (node, head))
+    def forget(self, identity):
+        self.rewrite(lambda line: line[1] != identity)
 
     def forget_node(self, node):
-        self.rewrite(lambda line: line[1] != node and not line[1].startswith(node + "/"))
+        self.rewrite(lambda line: line[2] != node and not line[2].startswith(node + "/"))
 
     def compact(self):
-        latest, counts = {}, {}
-        for stamp, node, head, _ in self.lines():
-            latest[(node, head)] = max(stamp, latest.get((node, head), 0.0))
-            counts[(node, head)] = counts.get((node, head), 0) + 1
-        self.write(
-            format_line(latest[key], key[0], key[1], f"touched x{counts[key]}") for key in latest
-        )
+        latest, nodes, counts = {}, {}, {}
+        for stamp, identity, node, _ in self.lines():
+            latest[identity] = max(stamp, latest.get(identity, 0.0))
+            nodes[identity] = node
+            counts[identity] = counts.get(identity, 0) + 1
+        self.write(format_line(latest[i], i, nodes[i], f"touched x{counts[i]}") for i in latest)
 
     def rewrite(self, keep):
         self.write(format_line(*line) for line in self.lines() if keep(line))
@@ -66,8 +65,8 @@ class Journal:
             return sum(1 for _ in f)
 
 
-def format_line(stamp, node, head, action):
-    return f"{stamp:.3f}\t{node or ROOT}\t{head}\t{action}\n"
+def format_line(stamp, identity, node, action):
+    return f"{stamp:.3f}\t{identity}\t{node or ROOT}\t{action}\n"
 
 
 def parse_line(raw):
@@ -78,5 +77,5 @@ def parse_line(raw):
         stamp = float(parts[0])
     except ValueError:
         return None
-    node = "" if parts[1] == ROOT else parts[1]
-    return stamp, node, parts[2], parts[3]
+    node = "" if parts[2] == ROOT else parts[2]
+    return stamp, parts[1], node, parts[3]

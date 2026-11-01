@@ -87,7 +87,7 @@ def test_fact_row_command_and_subtitle(home):
     assert row["subtitle"] == "ssh deploy@10.0.1.5", "a fact previews its first body line"
     cmd = command(row)
     assert cmd["do"] == "act" and cmd["mode"] == "copy", "↩ acts on the record"
-    assert cmd["path"].endswith("ssh-prod-web.txt"), "the command names the file"
+    assert "/ssh-prod-web." in cmd["path"], "the command names the file"
     assert command(row, "shift")["mode"] == "paste", "⇧↩ pastes"
     assert command(row, "cmd")["mode"] == "edit", "⌘↩ edits"
     assert command(row, "alt")["mode"] == "delete", "⌥↩ deletes"
@@ -142,7 +142,7 @@ def test_act_copy_touches_the_journal(home, mocker):
     perform.assert_called_once()
     assert perform.call_args[0][0].target == "ssh deploy@10.0.1.5", "copy the body"
     assert message == "Copied: ssh deploy@10.0.1.5", "the notification shows the value"
-    assert ("", "ssh-prod-web") in home.journal.touched(), "↩ is a touch"
+    assert home.journal.touched(), "↩ is a touch"
 
 
 def test_act_resolves_a_rule_and_touches_every_step(home, mocker):
@@ -150,10 +150,7 @@ def test_act_resolves_a_rule_and_touches_every_step(home, mocker):
     row = home.items("weight")["items"][0]
     message = home.act(command(row))
     assert message == "weight → weight kg #body → 80", "the chain is shown"
-    touched = home.journal.touched()
-    assert ("body", "weight") in touched and ("body", "weight-kg-body") in touched, (
-        "resolution touches the rule and the fact"
-    )
+    assert len(home.journal.touched()) == 2, "resolution touches the rule and the fact"
 
 
 def test_act_with_blanks_asks_before_doing(home, mocker):
@@ -194,11 +191,12 @@ def test_act_with_values_fills_then_copies(home, mocker):
 
 def test_act_delete_removes_file_and_journal(home, mocker):
     row = home.items("prod")["items"][0]
-    home.journal.touch("", "ssh-prod-web", "copy")
+    identity = home.tree.read(command(row)["path"]).identity
+    home.journal.touch(identity, "copy")
     message = home.act(command(row, "alt"))
     assert message == "Deleted: ssh prod web"
     assert titles(home.items("prod")) == ["Add: prod"], "the record is gone"
-    assert ("", "ssh-prod-web") not in home.journal.touched(), "and so is its history"
+    assert identity not in home.journal.touched(), "and so is its history"
 
 
 def test_act_edit_runs_the_editor(home, mocker):

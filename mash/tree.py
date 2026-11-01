@@ -5,6 +5,8 @@ from typing import NamedTuple
 from mash import records
 
 EXTENSION = ".txt"
+ID_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789"
+ID_LENGTH = 6
 INDEX = ".index"
 INDEX_VERSION = "mash-index-1"
 
@@ -21,7 +23,7 @@ class Stored(NamedTuple):
 
     @property
     def identity(self):
-        return self.node, self.name
+        return identity_of(self.node, self.name)
 
 
 class Tree:
@@ -91,7 +93,7 @@ class Tree:
     def add(self, node, record):
         folder = os.path.join(self.root, *node.split("/")) if node else self.root
         os.makedirs(folder, exist_ok=True)
-        path = free_path(folder, records.slug(record.head))
+        path = os.path.join(folder, f"{records.slug(record.head)}.{new_id()}{EXTENSION}")
         write_atomically(path, records.render(record))
         return path
 
@@ -125,13 +127,15 @@ def join_node(node, name):
     return f"{node}/{name}" if node else name
 
 
-def free_path(folder, slug):
-    candidate = os.path.join(folder, slug + EXTENSION)
-    n = 2
-    while os.path.exists(candidate):
-        candidate = os.path.join(folder, f"{slug}-{n}{EXTENSION}")
-        n += 1
-    return candidate
+def new_id():
+    return "".join(ID_ALPHABET[b % len(ID_ALPHABET)] for b in os.urandom(ID_LENGTH))
+
+
+def identity_of(node, name):
+    slug, dot, suffix = name.rpartition(".")
+    if dot and len(suffix) == ID_LENGTH and all(c in ID_ALPHABET for c in suffix):
+        return suffix
+    return join_node(node, name)
 
 
 def write_atomically(path, text):

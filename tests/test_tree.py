@@ -47,17 +47,17 @@ def test_missing_root_loads_nothing(tmp_path):
 @pytest.mark.parametrize(
     "node, line, relative",
     [
-        ("", "ssh prod web -> ssh x", "ssh-prod-web.txt"),
-        ("work", "k8 ctx -> kubectl", "work/k8-ctx.txt"),
-        ("work/k8s", "ctx staging -> x", "work/k8s/ctx-staging.txt"),
-        ("", "http://127.0.0.1:4000", "http-127-0-0-1-4000.txt"),
+        ("", "ssh prod web -> ssh x", "ssh-prod-web"),
+        ("work", "k8 ctx -> kubectl", "work/k8-ctx"),
+        ("work/k8s", "ctx staging -> x", "work/k8s/ctx-staging"),
+        ("", "http://127.0.0.1:4000", "http-127-0-0-1-4000"),
     ],
 )
 def test_add_writes_a_file_named_from_the_head(root, node, line, relative):
     path = Tree(root).add(node, from_box(line))
-    assert path == os.path.join(root, relative), (
-        f"{line!r} in {node!r} should be filed at {relative}"
-    )
+    stem, _, rest = path[len(root) + 1 :].partition(".")
+    assert stem == relative, f"{line!r} in {node!r} should be filed at {relative}.<id>.txt"
+    assert rest.endswith(".txt") and len(rest) == 10, "the name ends with a six-char id and .txt"
     with open(path, encoding="utf-8") as f:
         assert f.read() == line + "\n", "the file should hold the record as typed"
 
@@ -67,14 +67,12 @@ def test_add_creates_the_node_on_the_way(root):
     assert os.path.isdir(os.path.join(root, "a", "b", "c")), "missing folders should be created"
 
 
-def test_add_twice_numbers_the_second_file(root):
+def test_add_twice_keeps_both_records(root):
     tree = Tree(root)
-    tree.add("", from_box("ssh prod web -> one"))
+    first = tree.add("", from_box("ssh prod web -> one"))
     second = tree.add("", from_box("ssh prod web -> two"))
-    third = tree.add("", from_box("ssh prod web -> three"))
-    assert os.path.basename(second) == "ssh-prod-web-2.txt", "a collision should get -2"
-    assert os.path.basename(third) == "ssh-prod-web-3.txt", "the next collision should get -3"
-    assert len(tree.load()) == 3, "all three records should load"
+    assert first != second, "the id keeps the names apart"
+    assert len(tree.load()) == 2, "both records should load"
 
 
 def test_add_expands_box_newlines_into_lines(root):

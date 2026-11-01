@@ -66,19 +66,20 @@ Everything lives under one folder, `~/.mash` by default.
 - A **record** is a `*.txt` file. Its first line is the head and the arrow; the rest is the body.
 - A **subfolder** is a child node. Nesting is unlimited.
 - A node exists exactly when its folder does. Adding under `work/k8s/` creates the folders on the way.
-- A **record's identity** is its node path plus its file name. That is what the journal refers to, so editing a head keeps the record's history and renaming the file starts it over. Two records with the same head are two records.
-- The **file name** is derived from the head: lowercase, words joined by `-`, anything that is not a letter, digit or `-` dropped, `#` tags kept as words (`weight kg #body` → `weight-kg-body.txt`), `-2`, `-3` appended on collision. It is a convenience for you and your editor, never read by search. Edit the head inside the file and mash renames the file the next time it writes that record.
+- Every record mash writes gets an **id**: six random letters and digits, carried in the file name as `slug.id.txt`. The id is the record's identity: the journal refers to it, so you can edit the head, rename the slug part, or move the file to another node and its history follows. Two records with the same head are two records. A file you create by hand without an id is identified by its place instead (`work/notes` for `work/notes.txt`), which holds until you rename or move it.
+- The **slug** is derived from the head: lowercase, words joined by `-`, anything that is not a letter, digit or `-` dropped, `#` tags kept as words (`weight kg #body` → `weight-kg-body`). It is for you and your editor; search never reads file names.
 
 ```
 ~/.mash/
-├── ssh-prod-web.txt          root node
-├── weight.txt
+├── ssh-prod-web.k3f9ab.txt          root node
+├── weight.p0q2mz.txt
 ├── work/
-│   ├── k8-ctx.txt            node work/
+│   ├── k8-ctx.7xw1ue.txt            node work/
 │   └── k8s/
-│       └── ctx-staging.txt   node work/k8s/
+│       └── ctx-staging.ab9d2c.txt   node work/k8s/
 └── body/
-    └── weight-kg-body.txt    node body/
+    ├── weight-kg-body.x81pq2.txt    node body/
+    └── notes.txt                    hand-made, no id
 ```
 
 Files are UTF-8; words in any script work (`кава coffee -> ...`). Files not ending in `.txt` and dot-folders are ignored, so a `.git` inside the tree is fine.
@@ -333,14 +334,14 @@ There is no add mode and no add command in the box. Whatever you type is always 
 - A leading `node/` makes *Add* store there, creating the node if needed. The row says so: `Add to work/k8s/ (new node)`.
 - A new file is written in that node, named from the head. The folder is the source of truth; move or rename files freely.
 
-| you type | file | contents | shown as |
+| you type | file (`<id>` is six random characters) | contents | shown as |
 |---|---|---|---|
-| `ssh prod web -> ssh deploy@10.0.1.5` | `ssh-prod-web.txt` | the same line | ssh prod web |
-| `standup -> {{date}};;done: {{done}}` | `standup.txt` | `standup -> {{date}}` ⏎ `done: {{done}}` | standup |
-| `weight ~> weight kg` | `weight.txt` | the same line | weight |
-| `http://127.0.0.1:4000` | `http-127-0-0-1-4000.txt` | the same line | http://127.0.0.1:4000 |
-| `work/ k8 ctx -> kubectl …` | `work/k8-ctx.txt` | `k8 ctx -> kubectl …` | k8 ctx |
-| `ssh prod web -> …` again | `ssh-prod-web-2.txt` | | ssh prod web (both show) |
+| `ssh prod web -> ssh deploy@10.0.1.5` | `ssh-prod-web.<id>.txt` | the same line | ssh prod web |
+| `standup -> {{date}};;done: {{done}}` | `standup.<id>.txt` | `standup -> {{date}}` ⏎ `done: {{done}}` | standup |
+| `weight ~> weight kg` | `weight.<id>.txt` | the same line | weight |
+| `http://127.0.0.1:4000` | `http-127-0-0-1-4000.<id>.txt` | the same line | http://127.0.0.1:4000 |
+| `work/ k8 ctx -> kubectl …` | `work/k8-ctx.<id>.txt` | `k8 ctx -> kubectl …` | k8 ctx |
+| `ssh prod web -> …` again | `ssh-prod-web.<other id>.txt` | | ssh prod web (both show) |
 
 A query that is itself usable — a URL, an existing path, `@kw`, or text with `{{…}}` — also gets a **Run: …** row that acts on the text without storing it.
 
@@ -372,12 +373,12 @@ Only a leading or trailing `@word` is a hand-off, so `me@example.com` copies as 
 
 ## The journal
 
-`~/.mash/.journal.log` is an append-only file with one line per **touch**: every ↩, ⇧↩, add, and resolution step, as `seconds ␉ node ␉ file name ␉ action`.
+`~/.mash/.journal.log` is an append-only file with one line per **touch**: every ↩, ⇧↩, add, and resolution step, as `seconds ␉ identity ␉ node ␉ action`. The identity is the record's id, or its place for a hand-made file; the node is there for `forget --node` and for reading.
 
 ```
-1793528884.768	work/k8s	k8-ctx	copy
-1793528884.887	body	weight	resolve
-1793528884.887	body	weight-kg-body	copy
+1793528884.768	7xw1ue	work/k8s	copy
+1793528884.887	p0q2mz	body	resolve
+1793528884.887	x81pq2	body	copy
 ```
 
 Resolving a rule touches every step, including the fact it lands on. So after `weight ~> weight kg` has returned the oldest weight, that record is the most recently touched one, and `weight now => weight kg` returns it too until something else is touched. Reading through a rule is a use, and the time axis is about use; if you want the time axis to mean "created", that is the parked journal-as-body idea below.

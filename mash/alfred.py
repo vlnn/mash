@@ -137,7 +137,7 @@ class Session:
         if fill.blanks(body):
             return "Fill in the blanks first"
         for step in chain.chain:
-            self.journal.touch(step.node, step.name, mode)
+            self.journal.touch(step.identity, mode, step.node)
         message = self.do(body, mode)
         if len(chain.chain) > 1:
             return " → ".join([s.record.head for s in chain.chain] + [body.split("\n")[0]])
@@ -162,7 +162,7 @@ class Session:
     def add(self, node, text):
         record = record_grammar.from_box(text)
         path = self.tree.add(node, record)
-        self.journal.touch(node, self.tree.read(path).name, "add")
+        self.journal.touch(self.tree.read(path).identity, "add", node)
         return f"Added to {node + '/' if node else '.'}: {record.head}"
 
     def edit(self, stored):
@@ -180,7 +180,7 @@ class Session:
             self.tree.delete(stored)
         except LookupError as error:
             return str(error)
-        self.journal.forget(stored.node, stored.name)
+        self.journal.forget(stored.identity)
         return f"Deleted: {stored.record.head}"
 
     def prompt(self, command, typed):

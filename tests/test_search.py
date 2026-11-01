@@ -11,9 +11,9 @@ def stored(line, node="", mtime=0.0):
     return Stored(record, node, f"/root/{node}/{slug(record.head)}.txt", mtime)
 
 
-def test_identity_is_node_and_file_name():
-    assert stored("a b -> 1", node="work").identity == ("work", "a-b"), (
-        "a record is identified by where its file is"
+def test_identity_without_an_id_is_the_place_in_the_tree():
+    assert stored("a b -> 1", node="work").identity == "work/a-b", (
+        "a hand-made record is identified by where its file is"
     )
 
 
@@ -89,7 +89,7 @@ def test_naming_a_node_narrows_to_its_subtree(text, expected):
 
 
 def test_touch_times_override_mtime():
-    touched = {("", "grafana-latency"): 100.0}
+    touched = {"grafana-latency": 100.0}
     hits = search(CORPUS, query(""), touched)
     assert heads(hits)[0] == "grafana latency", "a journal touch should outrank file mtime"
 

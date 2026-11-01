@@ -43,7 +43,8 @@ def test_listing(home, capsys):
 def test_add_reports_node_and_head(home, capsys):
     cli.main(["add", "work/ k8 ctx -> kubectl"])
     assert capsys.readouterr().out == "Added to work/: k8 ctx\n"
-    assert (home / "work" / "k8-ctx.txt").read_text() == "k8 ctx -> kubectl\n"
+    (path,) = (home / "work").glob("k8-ctx.*.txt")
+    assert path.read_text() == "k8 ctx -> kubectl\n"
 
 
 def test_fill(home, capsys, mocker):
@@ -56,13 +57,13 @@ def test_forget_asks_then_deletes(home, capsys, monkeypatch):
     monkeypatch.setattr("sys.stdin", __import__("io").StringIO("y\n"))
     assert cli.main(["forget", "prod"]) == 0
     assert "Deleted: ssh prod web" in capsys.readouterr().out
-    assert not (home / "ssh-prod-web.txt").exists(), "the file is gone"
+    assert not list(home.glob("ssh-prod-web.*")), "the file is gone"
 
 
 def test_forget_declined_keeps_file(home, monkeypatch):
     monkeypatch.setattr("sys.stdin", __import__("io").StringIO("n\n"))
     assert cli.main(["forget", "prod"]) == 1
-    assert (home / "ssh-prod-web.txt").exists(), "n keeps the file"
+    assert list(home.glob("ssh-prod-web.*")), "n keeps the file"
 
 
 def test_forget_node(home, capsys, monkeypatch):

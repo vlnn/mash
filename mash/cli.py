@@ -87,7 +87,7 @@ def best(argv):
         print(chain.error, file=sys.stderr)
         return 1
     for step in chain.chain:
-        current.journal.touch(step.node, step.name, "print")
+        current.journal.touch(step.identity, "print", step.node)
     print(fill.preview(chain.fact.record.body))
     return 0
 
@@ -135,7 +135,7 @@ def forget(argv):
     if not confirm(f"forget {what} {stored.record.head!r} in {stored.node or '.'} ({stored.path})"):
         return 1
     if history_only:
-        current.journal.forget(stored.node, stored.name)
+        current.journal.forget(stored.identity)
         print(f"Forgot history of: {stored.record.head}")
     else:
         print(current.delete(stored))
