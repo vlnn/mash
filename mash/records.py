@@ -15,6 +15,7 @@ class Record(NamedTuple):
     arrow: str
     body: str
     query: str
+    searchable: str
 
     @property
     def is_rule(self):
@@ -36,12 +37,12 @@ def parse(text):
 
 def fact(head, body):
     words = head_words(head)
-    return Record(head, words, tags_of(words), FACT_ARROW, body, "")
+    return Record(head, words, tags_of(words), FACT_ARROW, body, "", searchable(words))
 
 
 def rule(head, arrow, query):
     words = head_words(head)
-    return Record(head, words, tags_of(words), arrow, "", query)
+    return Record(head, words, tags_of(words), arrow, "", query, searchable(words))
 
 
 def from_box(line):
@@ -83,3 +84,7 @@ def head_words(head):
 
 def tags_of(words):
     return tuple(w for w in words if w.startswith("#"))
+
+
+def searchable(words):
+    return " ".join(w for w in words if not w.startswith("#")).lower()
