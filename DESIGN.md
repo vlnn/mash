@@ -174,7 +174,7 @@ mash add 'body/ weight kg #body -> 81'
 stash k8s pods broken     fish function: stores the previous command under those words
 ```
 
-Alfred adds the live list, mods, prompts and node rows; fish adds pipes and `$history`. Both go through the same `Session`.
+Alfred adds the live list, mods, prompts and node rows; fish adds pipes and `$history`. Both go through the same `Session`; Alfred's rows are rendered from what it returns.
 
 ---
 

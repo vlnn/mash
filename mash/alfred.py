@@ -1,192 +1,98 @@
 import json
 import os
-from typing import NamedTuple
 
-from mash import actions, fill, resolve, search
-from mash import query as queries
-from mash import records as record_grammar
+from mash import actions, fill
 
 NODE_ICON = {"path": "node.png"}
+ADD_ICON = {"path": "add.png"}
 
 
-class Settings(NamedTuple):
-    editor: str = "open -t {file}"
-    flows: dict = {}
-    max_results: int = 50
+def items(session, text):
+    listing = session.listing(text)
+    rows = [node_row(node, count) for node, count in listing.folders]
+    rows += [row(session, hit.stored) for hit in listing.hits]
+    if listing.query.add:
+        rows.insert(0, add_row(listing.add))
+    else:
+        if listing.run is not None:
+            rows.append(run_row(listing.run))
+        rows.append(add_row(listing.add))
+    return {"items": rows, "variables": {"prompt": "0"}}
 
 
-def read_clipboard():
-    import subprocess
-
-    return subprocess.run(["pbpaste"], capture_output=True, check=False).stdout.decode("utf-8")
-
-
-class Session:
-    def __init__(self, tree, journal, settings):
-        self.tree = tree
-        self.journal = journal
-        self.settings = settings
-
-    def items(self, text):
-        query = queries.parse(search_text(text))
-        snapshot = self.tree.load()
-        hits = search.search(snapshot.records, query, self.journal.touched())
-        rows = node_rows(query, snapshot) + [
-            self.row(hit) for hit in hits[: self.settings.max_results]
-        ]
-        if query.add:
-            rows.insert(0, add_row(query, text, snapshot))
-        else:
-            if hits and usable(text):
-                rows.append(run_row(text))
-            rows.append(add_row(query, text, snapshot))
-        return {"items": rows, "variables": {"prompt": "0"}}
-
-    def row(self, hit):
-        record = hit.stored.record
-        path = hit.stored.path
-        command = self.command_for(hit.stored)
-        return {
-            "title": record.head,
-            "subtitle": self.subtitle(record),
-            "arg": dumps(command),
-            "variables": {"prompt": "1" if command["do"] == "prompt" else "0"},
-            "mods": {
-                "shift": {"arg": dumps(dict(command, mode="paste")), "subtitle": "Paste"},
-                "cmd": {"arg": dumps(act(path, "edit")), "subtitle": f"Edit {path}"},
-                "alt": {"arg": dumps(act(path, "delete")), "subtitle": "Delete this record"},
-                "ctrl": {"arg": dumps(command), "subtitle": self.detail(hit.stored)},
-            },
-            "text": {"copy": record.body, "largetype": record.body},
-        }
-
-    def command_for(self, stored):
-        record = stored.record
-        if not record.is_rule and fill.blanks(record.body):
-            return dict(act(stored.path, "copy"), do="prompt", values={})
-        return act(stored.path, "copy")
-
-    def subtitle(self, record):
-        if record.is_rule:
-            return f"{record.arrow} {record.query}"
-        first_line = fill.preview(record.body).split("\n")[0]
-        action = actions.decide(first_line, os.path.exists, self.settings.flows)
-        if action.kind == "open":
-            return f"Open · {first_line}"
-        if action.kind == "handoff":
-            keyword, _, rest = action.target.partition(" ")
-            return f"→ {keyword} · {rest}".rstrip(" ·")
-        return first_line
-
-    def detail(self, stored):
-        return f"{stored.path} · {self.subtitle(stored.record)}"
-
-    def act(self, command):
-        do = command["do"]
-        if do == "add":
-            return self.add(command["node"], command["text"])
-        if do == "run":
-            return self.run_text(command["text"], command.get("mode", "copy"))
-        stored = self.tree.read(command["path"])
-        mode = command.get("mode", "copy")
-        if mode == "edit":
-            return self.edit(stored)
-        if mode == "delete":
-            return self.delete(stored)
-        return self.use(stored, mode, command.get("values", {}))
-
-    def use(self, stored, mode, values):
-        chain = self.resolve_chain(self.tree.load(), stored)
-        if chain.fact is None:
-            return f"Could not resolve: {chain.error}"
-        body = fill.fill(chain.fact.record.body, values, read_clipboard)
-        if fill.blanks(body):
-            return "Fill in the blanks first"
-        for step in chain.chain:
-            self.journal.touch(step.identity, mode, step.node)
-        message = self.do(body, mode)
-        if len(chain.chain) > 1:
-            return " → ".join([s.record.head for s in chain.chain] + [body.split("\n")[0]])
-        return message
-
-    def resolve_chain(self, snapshot, stored):
-        return resolve.resolve(snapshot.records, stored, self.journal.touched())
-
-    def do(self, body, mode):
-        action = actions.decide(body, os.path.exists, self.settings.flows)
-        actions.perform(action)
-        if mode == "paste" and action.kind == "copy":
-            actions.paste()
-            return f"Pasted: {body}"
-        return {"open": "Opened: ", "handoff": "Alfred: ", "copy": "Copied: "}[
-            action.kind
-        ] + action.target
-
-    def run_text(self, text, mode):
-        return self.do(fill.fill(text, {}, read_clipboard), mode)
-
-    def add(self, node, text):
-        record = record_grammar.from_box(text)
-        path = self.tree.add(node, record)
-        self.journal.touch(self.tree.read(path).identity, "add", node)
-        return f"Added to {node + '/' if node else '.'}: {record.head}"
-
-    def edit(self, stored):
-        import shlex
-        import subprocess
-
-        command = [
-            part.replace("{file}", stored.path) for part in shlex.split(self.settings.editor)
-        ]
-        subprocess.run(command, check=False)
-        return f"Editing {stored.path}"
-
-    def delete(self, stored):
-        try:
-            self.tree.delete(stored)
-        except LookupError as error:
-            return str(error)
-        self.journal.forget(stored.identity)
-        return f"Deleted: {stored.record.head}"
-
-    def prompt(self, command, typed):
-        stored = self.tree.read(command["path"])
-        values = command.get("values", {})
-        pending = [(n, d) for n, d in fill.blanks(stored.record.body) if n not in values]
-        name, default = pending[0]
-        total = len(fill.blanks(stored.record.body))
-        position = total - len(pending) + 1
-        choices = [c for c in (typed, default, read_clipboard().strip()) if c]
-        rows = []
-        for choice in dict.fromkeys(choices):
-            chosen = dict(values, **{name: choice})
-            remaining = pending[1:]
-            next_command = dict(command, values=chosen, do="prompt" if remaining else "act")
-            rows.append(
-                {
-                    "title": f"{name} ({position}/{total}): {choice}",
-                    "subtitle": fill.fill(stored.record.body, chosen, lambda: "{{clipboard}}"),
-                    "arg": dumps(next_command),
-                    "variables": {"more": "1" if remaining else "0"},
-                }
-            )
-        return {"items": rows}
+def act(session, command):
+    do = command["do"]
+    if do == "add":
+        return session.add(command["node"], command["text"])
+    if do == "run":
+        return session.run_text(command["text"], command.get("mode", "copy"))
+    stored = session.tree.read(command["path"])
+    mode = command.get("mode", "copy")
+    if mode == "edit":
+        return session.edit(stored)
+    if mode == "delete":
+        return session.delete(stored)
+    return session.use(stored, mode, command.get("values", {}))
 
 
-def act(path, mode):
+def prompt(session, command, typed):
+    stored = session.tree.read(command["path"])
+    asked = session.prompt(stored, command.get("values", {}), typed)
+    return {"items": [prompt_row(command, asked, option) for option in asked.options]}
+
+
+def prompt_row(command, asked, option):
+    next_command = dict(command, values=option.values, do="prompt" if option.more else "act")
+    return {
+        "title": f"{asked.name} ({asked.position}/{asked.total}): {option.value}",
+        "subtitle": option.preview,
+        "arg": dumps(next_command),
+        "variables": {"more": "1" if option.more else "0"},
+    }
+
+
+def row(session, stored):
+    record = stored.record
+    path = stored.path
+    command = command_for(stored)
+    subtitle = describe(session, record)
+    return {
+        "title": record.head,
+        "subtitle": subtitle,
+        "arg": dumps(command),
+        "variables": {"prompt": "1" if command["do"] == "prompt" else "0"},
+        "mods": {
+            "shift": {"arg": dumps(dict(command, mode="paste")), "subtitle": "Paste"},
+            "cmd": {"arg": dumps(act_command(path, "edit")), "subtitle": f"Edit {path}"},
+            "alt": {"arg": dumps(act_command(path, "delete")), "subtitle": "Delete this record"},
+            "ctrl": {"arg": dumps(command), "subtitle": f"{path} · {subtitle}"},
+        },
+        "text": {"copy": record.body, "largetype": record.body},
+    }
+
+
+def command_for(stored):
+    record = stored.record
+    if not record.is_rule and fill.blanks(record.body):
+        return dict(act_command(stored.path, "copy"), do="prompt", values={})
+    return act_command(stored.path, "copy")
+
+
+def act_command(path, mode):
     return {"do": "act", "path": path, "mode": mode}
 
 
-def node_rows(query, snapshot):
-    if query.add or query.tags or len(query.words) > 1:
-        return []
-    if not query.words:
-        nodes = snapshot.children(query.node)
-    elif query.node:
-        nodes = []
-    else:
-        nodes = snapshot.named_like(query.words[0])
-    return [node_row(node, snapshot.folders[node]) for node in nodes]
+def describe(session, record):
+    if record.is_rule:
+        return f"{record.arrow} {record.query}"
+    first_line = fill.preview(record.body).split("\n")[0]
+    action = actions.decide(first_line, os.path.exists, session.settings.flows)
+    if action.kind == "open":
+        return f"Open · {first_line}"
+    if action.kind == "handoff":
+        keyword, _, rest = action.target.partition(" ")
+        return f"→ {keyword} · {rest}".rstrip(" ·")
+    return first_line
 
 
 def node_row(node, count):
@@ -200,20 +106,18 @@ def node_row(node, count):
     }
 
 
-def add_row(query, text, snapshot):
-    node = query.node
-    where = f"Add to {node}/" if node else "Add"
-    if node and node not in snapshot.folders:
+def add_row(add):
+    where = f"Add to {add.node}/" if add.node else "Add"
+    if add.new:
         where += " (new node)"
-    shown = query_text_without_node(text, node)
-    record = query.add or record_grammar.from_box(shown)
+    record = add.record
     return {
-        "title": f"{where}: {shown}",
+        "title": f"{where}: {add.text}",
         "subtitle": fill.preview(record.body)
         if not record.is_rule
         else f"rule {record.arrow} {record.query}",
-        "arg": dumps({"do": "add", "node": node, "text": shown}),
-        "icon": {"path": "add.png"},
+        "arg": dumps({"do": "add", "node": add.node, "text": add.text}),
+        "icon": ADD_ICON,
     }
 
 
@@ -224,28 +128,6 @@ def run_row(text):
         "arg": dumps({"do": "run", "text": text}),
         "mods": {"shift": {"arg": dumps({"do": "run", "text": text, "mode": "paste"})}},
     }
-
-
-def usable(text):
-    action = actions.decide(text, os.path.exists, {})
-    return action.kind != "copy" or bool(fill.blanks(text)) or "{{" in text
-
-
-def search_text(text):
-    handoff = actions.handoff_of(text.strip(), {})
-    if handoff is None or records_arrow(text):
-        return text
-    return handoff.partition(" ")[2]
-
-
-def records_arrow(text):
-    return record_grammar.ARROW.search(text) is not None
-
-
-def query_text_without_node(text, node):
-    if not node:
-        return text.strip()
-    return " ".join(t for t in text.split() if not queries.is_node(t)).strip()
 
 
 def dumps(command):

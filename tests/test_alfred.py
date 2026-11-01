@@ -6,6 +6,7 @@ import pytest
 from mash import alfred
 from mash.journal import Journal
 from mash.records import from_box
+from mash.session import Session, Settings
 from mash.tree import Tree
 
 
@@ -20,7 +21,11 @@ def home(tmp_path):
     tree.add("body", from_box("weight ~> weight kg"))
     tree.add("work/k8s", from_box("ctx staging -> kubectl config use-context staging"))
     tree.add("", from_box("delany books -> delany @kb"))
-    return alfred.Session(tree, Journal(os.path.join(root, ".journal.log")), alfred.Settings())
+    return Session(tree, Journal(os.path.join(root, ".journal.log")), Settings())
+
+
+def items(session, text):
+    return alfred.items(session, text)
 
 
 def titles(result):
@@ -33,23 +38,23 @@ def command(item, mod=None):
 
 
 def test_matches_then_add_row(home):
-    result = home.items("prod")
+    result = items(home, "prod")
     assert titles(result) == ["ssh prod web", "Add: prod"], "hits come first, Add last"
 
 
 def test_no_match_offers_only_add(home):
-    result = home.items("zzz")
+    result = items(home, "zzz")
     assert titles(result) == ["Add: zzz"], "a miss is an Add away from being stored"
 
 
 def test_arrow_moves_add_to_the_top(home):
-    result = home.items("ssh prod web -> ssh other")
+    result = items(home, "ssh prod web -> ssh other")
     assert titles(result)[0] == "Add: ssh prod web -> ssh other", "typing an arrow means adding"
     assert "ssh prod web" in titles(result), "the head words are still searched"
 
 
 def test_add_row_names_the_node(home):
-    result = home.items("work/ k8 ctx -> kubectl")
+    result = items(home, "work/ k8 ctx -> kubectl")
     assert titles(result)[0] == "Add to work/: k8 ctx -> kubectl", "the row says where it adds"
     assert command(result["items"][0]) == {
         "do": "add",
@@ -59,27 +64,27 @@ def test_add_row_names_the_node(home):
 
 
 def test_several_node_terms_compose_into_a_path(home):
-    result = home.items("rain/ pain/ main/ deep -> x")
+    result = items(home, "rain/ pain/ main/ deep -> x")
     assert titles(result)[0] == "Add to rain/pain/main/ (new node): deep -> x"
-    home.act(command(result["items"][0]))
-    assert titles(home.items("rain/pain/main/"))[0] == "deep", "the record landed three levels down"
-    assert titles(home.items("rain/"))[0] == "rain/pain/", "and the folders exist on the way"
+    alfred.act(home, command(result["items"][0]))
+    assert titles(items(home, "rain/pain/main/"))[0] == "deep", "the record landed three deep"
+    assert titles(items(home, "rain/"))[0] == "rain/pain/", "and the folders exist on the way"
 
 
 def test_add_row_says_when_the_node_is_new(home):
-    result = home.items("new/ thing -> x")
+    result = items(home, "new/ thing -> x")
     assert "(new node)" in result["items"][0]["title"], "adding into a missing node says so"
 
 
 def test_empty_query_lists_root_folders_then_everything(home):
-    result = home.items("")
+    result = items(home, "")
     assert titles(result)[:2] == ["body/", "work/"], "the root's folders come first, sorted"
     assert len(result["items"]) == 2 + 7 + 1, "then every record, then Add"
     assert "work/k8s/" not in titles(result), "only direct children, not grandchildren"
 
 
 def test_empty_query_inside_a_node_lists_its_folders(home):
-    result = home.items("work/")
+    result = items(home, "work/")
     assert titles(result)[0] == "work/k8s/", "inside work/, its own folders come first"
 
 
@@ -87,7 +92,7 @@ def test_empty_folders_are_listed_too(home):
     import os
 
     os.makedirs(os.path.join(home.tree.root, "empty"))
-    row = next(i for i in home.items("")["items"] if i["title"] == "empty/")
+    row = next(i for i in items(home, "")["items"] if i["title"] == "empty/")
     assert row["subtitle"].startswith("0 records"), "a folder with no records still shows"
 
 
@@ -95,20 +100,20 @@ def test_empty_folder_is_offered_by_prefix_too(home):
     import os
 
     os.makedirs(os.path.join(home.tree.root, "empty"))
-    assert titles(home.items("em"))[0] == "empty/", "an empty folder is a node like any other"
+    assert titles(items(home, "em"))[0] == "empty/", "an empty folder is a node like any other"
 
 
 def test_adding_into_an_existing_empty_folder_is_not_a_new_node(home):
     import os
 
     os.makedirs(os.path.join(home.tree.root, "empty"))
-    assert titles(home.items("empty/ x -> y"))[0] == "Add to empty/: x -> y", (
+    assert titles(items(home, "empty/ x -> y"))[0] == "Add to empty/: x -> y", (
         "the folder exists, so the add row must not call it new"
     )
 
 
 def test_node_row_offers_autocomplete(home):
-    result = home.items("wo")
+    result = items(home, "wo")
     row = result["items"][0]
     assert row["title"] == "work/", "a node whose name starts with the query gets a row"
     assert row["autocomplete"] == "work/ ", "↩ or ⇥ should put the node into the query"
@@ -117,14 +122,14 @@ def test_node_row_offers_autocomplete(home):
 
 
 def test_inside_a_node_only_its_subtree_shows(home):
-    result = home.items("work/")
+    result = items(home, "work/")
     assert titles(result) == ["work/k8s/", "ctx staging", "Add to work/: "], (
         "work/ shows its folders and its subtree"
     )
 
 
 def test_fact_row_command_and_subtitle(home):
-    row = home.items("prod")["items"][0]
+    row = items(home, "prod")["items"][0]
     assert row["subtitle"] == "ssh deploy@10.0.1.5", "a fact previews its first body line"
     cmd = command(row)
     assert cmd["do"] == "act" and cmd["mode"] == "copy", "↩ acts on the record"
@@ -135,30 +140,30 @@ def test_fact_row_command_and_subtitle(home):
 
 
 def test_open_subtitle_for_urls(home):
-    row = home.items("grafana")["items"][0]
+    row = items(home, "grafana")["items"][0]
     assert row["subtitle"].startswith("Open · "), "a URL says it will open"
 
 
 def test_rule_row_shows_its_query(home):
-    row = home.items("weight")["items"][0]
+    row = items(home, "weight")["items"][0]
     assert row["title"] == "weight", "the tighter head wins"
     assert row["subtitle"] == "~> weight kg", "a rule shows arrow and query"
 
 
 def test_handoff_subtitle(home):
-    row = home.items("delany")["items"][0]
+    row = items(home, "delany")["items"][0]
     assert row["subtitle"] == "→ kb · delany", "a hand-off says where it goes"
 
 
 def test_placeholder_preview_in_subtitle(home, mocker):
     mocker.patch("mash.fill.today", return_value="2026-11-01")
     home.tree.add("", from_box("stamp -> {{date}} note"))
-    row = home.items("stamp")["items"][0]
+    row = items(home, "stamp")["items"][0]
     assert row["subtitle"] == "2026-11-01 note", "date fills in the preview"
 
 
 def test_run_row_for_usable_text_with_matches(home):
-    result = home.items("delany @kobold")
+    result = items(home, "delany @kobold")
     assert titles(result) == ["delany books", "Run: delany @kobold", "Add: delany @kobold"], (
         "usable text with a hit gets a Run row between hits and Add"
     )
@@ -166,20 +171,20 @@ def test_run_row_for_usable_text_with_matches(home):
 
 
 def test_no_run_row_without_matches(home):
-    result = home.items("https://example.com/zzz")
+    result = items(home, "https://example.com/zzz")
     assert titles(result) == ["Add: https://example.com/zzz"], "no hit means no Run row"
 
 
 def test_max_results_caps_rows(home):
-    session = alfred.Session(home.tree, home.journal, alfred.Settings(max_results=2))
-    result = session.items("")
+    session = Session(home.tree, home.journal, Settings(max_results=2))
+    result = items(session, "")
     assert len(result["items"]) == 2 + 2 + 1, "root folders, max_results hits, Add"
 
 
 def test_act_copy_touches_the_journal(home, mocker):
-    perform = mocker.patch("mash.alfred.actions.perform")
-    row = home.items("prod")["items"][0]
-    message = home.act(command(row))
+    perform = mocker.patch("mash.session.actions.perform")
+    row = items(home, "prod")["items"][0]
+    message = alfred.act(home, command(row))
     perform.assert_called_once()
     assert perform.call_args[0][0].target == "ssh deploy@10.0.1.5", "copy the body"
     assert message == "Copied: ssh deploy@10.0.1.5", "the notification shows the value"
@@ -187,30 +192,30 @@ def test_act_copy_touches_the_journal(home, mocker):
 
 
 def test_act_resolves_a_rule_and_touches_every_step(home, mocker):
-    mocker.patch("mash.alfred.actions.perform")
-    row = home.items("weight")["items"][0]
-    message = home.act(command(row))
+    mocker.patch("mash.session.actions.perform")
+    row = items(home, "weight")["items"][0]
+    message = alfred.act(home, command(row))
     assert message == "weight → weight kg #body → 80", "the chain is shown"
     assert len(home.journal.touched()) == 2, "resolution touches the rule and the fact"
 
 
 def test_act_with_blanks_asks_before_doing(home, mocker):
-    perform = mocker.patch("mash.alfred.actions.perform")
-    row = home.items("box")["items"][0]
+    perform = mocker.patch("mash.session.actions.perform")
+    row = items(home, "box")["items"][0]
     cmd = command(row)
     assert cmd["do"] == "prompt", "a record with blanks prompts first"
     perform.assert_not_called()
 
 
 def test_prompt_rows_and_progression(home, mocker):
-    mocker.patch("mash.alfred.read_clipboard", return_value="10.0.0.9")
-    row = home.items("box")["items"][0]
-    first = home.prompt(command(row), "")
+    mocker.patch("mash.session.read_clipboard", return_value="10.0.0.9")
+    row = items(home, "box")["items"][0]
+    first = alfred.prompt(home, command(row), "")
     assert [i["title"] for i in first["items"]] == ["user (1/2): root", "user (1/2): 10.0.0.9"], (
         "first prompt offers the default and the clipboard"
     )
     assert first["items"][0]["subtitle"] == "ssh root@{{host}}", "the subtitle shows progress"
-    second = home.prompt(command(first["items"][0]), "db")
+    second = alfred.prompt(home, command(first["items"][0]), "db")
     assert [i["title"] for i in second["items"]][:2] == [
         "host (2/2): db",
         "host (2/2): 10.0.0.9",
@@ -222,41 +227,41 @@ def test_prompt_rows_and_progression(home, mocker):
 
 
 def test_act_with_values_fills_then_copies(home, mocker):
-    perform = mocker.patch("mash.alfred.actions.perform")
-    row = home.items("box")["items"][0]
+    perform = mocker.patch("mash.session.actions.perform")
+    row = items(home, "box")["items"][0]
     cmd = dict(command(row), do="act", mode="copy", values={"user": "root", "host": "db"})
-    message = home.act(cmd)
+    message = alfred.act(home, cmd)
     assert perform.call_args[0][0].target == "ssh root@db", "blanks are filled before acting"
     assert message == "Copied: ssh root@db"
 
 
 def test_act_delete_removes_file_and_journal(home, mocker):
-    row = home.items("prod")["items"][0]
+    row = items(home, "prod")["items"][0]
     identity = home.tree.read(command(row)["path"]).identity
     home.journal.touch(identity, "copy")
-    message = home.act(command(row, "alt"))
+    message = alfred.act(home, command(row, "alt"))
     assert message == "Deleted: ssh prod web"
-    assert titles(home.items("prod")) == ["Add: prod"], "the record is gone"
+    assert titles(items(home, "prod")) == ["Add: prod"], "the record is gone"
     assert identity not in home.journal.touched(), "and so is its history"
 
 
 def test_act_edit_runs_the_editor(home, mocker):
     run = mocker.patch("subprocess.run")
-    session = alfred.Session(home.tree, home.journal, alfred.Settings(editor="code -g {file}"))
-    row = session.items("prod")["items"][0]
+    session = Session(home.tree, home.journal, Settings(editor="code -g {file}"))
+    row = items(session, "prod")["items"][0]
     cmd = command(row, "cmd")
-    session.act(cmd)
+    alfred.act(session, cmd)
     assert run.call_args[0][0] == ["code", "-g", cmd["path"]], "the editor command gets the file"
 
 
 def test_act_add_writes_and_reports(home):
-    message = home.act({"do": "add", "node": "work", "text": "k8 ctx -> kubectl"})
+    message = alfred.act(home, {"do": "add", "node": "work", "text": "k8 ctx -> kubectl"})
     assert message == "Added to work/: k8 ctx"
-    assert titles(home.items("work/ k8"))[0] == "k8 ctx", "the new record is found"
+    assert titles(items(home, "work/ k8"))[0] == "k8 ctx", "the new record is found"
 
 
 def test_act_run_acts_on_the_text_without_storing(home, mocker):
-    perform = mocker.patch("mash.alfred.actions.perform")
-    home.act({"do": "run", "text": "delany @kobold"})
+    perform = mocker.patch("mash.session.actions.perform")
+    alfred.act(home, {"do": "run", "text": "delany @kobold"})
     assert perform.call_args[0][0].kind == "handoff"
-    assert titles(home.items("kobold")) == ["Add: kobold"], "nothing was stored"
+    assert titles(items(home, "kobold")) == ["Add: kobold"], "nothing was stored"

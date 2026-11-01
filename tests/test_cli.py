@@ -48,7 +48,7 @@ def test_add_reports_node_and_head(home, capsys):
 
 
 def test_fill(home, capsys, mocker):
-    mocker.patch("mash.alfred.read_clipboard", return_value="")
+    mocker.patch("mash.session.read_clipboard", return_value="")
     cli.main(["fill", "ssh {{user=root}}@{{host}}", "host=db"])
     assert capsys.readouterr().out == "ssh root@db\n"
 
@@ -79,7 +79,7 @@ def test_alfred_json(home, capsys):
 
 
 def test_act_round_trip(home, capsys, mocker):
-    mocker.patch("mash.alfred.actions.perform")
+    mocker.patch("mash.session.actions.perform")
     cli.main(["--alfred", "prod"])
     row = json.loads(capsys.readouterr().out)["items"][0]
     cli.main(["--act", row["arg"]])
@@ -95,6 +95,6 @@ def test_settings_come_from_alfred_variables(monkeypatch):
     monkeypatch.setenv("flows", "tally=t kobold=kb")
     monkeypatch.setenv("max_results", "7")
     monkeypatch.setenv("editor", "code {file}")
-    assert cli.settings() == cli.alfred.Settings(
+    assert cli.settings() == cli.Settings(
         editor="code {file}", flows={"tally": "t", "kobold": "kb"}, max_results=7
     )

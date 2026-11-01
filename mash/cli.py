@@ -5,6 +5,7 @@ import sys
 from mash import actions, alfred, fill, search
 from mash import query as queries
 from mash.journal import Journal
+from mash.session import Session, Settings, query_text_without_node, read_clipboard
 from mash.tree import Tree
 
 DEFAULT_FOLDER = "~/.mash"
@@ -37,7 +38,7 @@ def setting(name, default):
 
 
 def settings():
-    return alfred.Settings(
+    return Settings(
         editor=setting("editor", "open -t {file}"),
         flows=actions.parse_flows(setting("flows", "")),
         max_results=int(setting("max_results", "50")),
@@ -45,7 +46,7 @@ def settings():
 
 
 def session():
-    return alfred.Session(Tree(folder()), Journal(os.path.join(folder(), JOURNAL)), settings())
+    return Session(Tree(folder()), Journal(os.path.join(folder(), JOURNAL)), settings())
 
 
 COMMANDS = {}
@@ -86,8 +87,7 @@ def best(argv):
     if chain.fact is None:
         print(chain.error, file=sys.stderr)
         return 1
-    for step in chain.chain:
-        current.journal.touch(step.identity, "print", step.node)
+    current.touch_chain(chain.chain, "print")
     print(fill.preview(chain.fact.record.body))
     return 0
 
@@ -106,8 +106,8 @@ def listing(argv):
 @command("add")
 def add(argv):
     query = queries.parse(" ".join(argv))
-    text = alfred.query_text_without_node(" ".join(argv), query.node)
-    print(session().act({"do": "add", "node": query.node, "text": text}))
+    text = query_text_without_node(" ".join(argv), query.node)
+    print(session().add(query.node, text))
     return 0
 
 
@@ -115,7 +115,7 @@ def add(argv):
 def fill_command(argv):
     body, pairs = argv[0], argv[1:]
     values = dict(pair.partition("=")[::2] for pair in pairs if "=" in pair)
-    print(fill.fill(body, values, alfred.read_clipboard))
+    print(fill.fill(body, values, read_clipboard))
     return 0
 
 
@@ -134,11 +134,7 @@ def forget(argv):
     what = "history of" if history_only else "record"
     if not confirm(f"forget {what} {stored.record.head!r} in {stored.node or '.'} ({stored.path})"):
         return 1
-    if history_only:
-        current.journal.forget(stored.identity)
-        print(f"Forgot history of: {stored.record.head}")
-    else:
-        print(current.delete(stored))
+    print(current.forget_history(stored) if history_only else current.delete(stored))
     return 0
 
 
@@ -165,20 +161,20 @@ def confirm(what):
 
 @command("--alfred")
 def alfred_items(argv):
-    json.dump(session().items(" ".join(argv)), sys.stdout, ensure_ascii=False)
+    json.dump(alfred.items(session(), " ".join(argv)), sys.stdout, ensure_ascii=False)
     return 0
 
 
 @command("--act")
 def alfred_act(argv):
-    print(session().act(json.loads(argv[0])))
+    print(alfred.act(session(), json.loads(argv[0])))
     return 0
 
 
 @command("--prompt")
 def alfred_prompt(argv):
     typed = " ".join(argv[1:]).strip()
-    json.dump(session().prompt(json.loads(argv[0]), typed), sys.stdout, ensure_ascii=False)
+    json.dump(alfred.prompt(session(), json.loads(argv[0]), typed), sys.stdout, ensure_ascii=False)
     return 0
 
 

@@ -531,7 +531,8 @@ The Alfred plumbing (the prompt loop through an external trigger, the conditiona
 | `mash/journal.py` | touches, last-touch lookup, compaction |
 | `mash/fill.py` | placeholders and their defaults |
 | `mash/actions.py` | what ↩ does for a body: open, hand off, prompt, copy |
-| `mash/alfred.py` | `Session`: Script Filter rows, node rows, *Add*, *Run*, prompt rows, and `act` for what ↩ does |
+| `mash/session.py` | `Session`, shared by both surfaces: a `Listing` (folders, hits, *Run*, *Add*) for a box text, resolution and touching, `use`, `add`, `delete`, prompt options |
+| `mash/alfred.py` | renders a `Listing` and a `Prompt` as Script Filter rows, and maps a row's command back onto the `Session` |
 | `mash/cli.py` | `mash`, `-l`, `add`, `fill`, `forget`, `--resolve`, `--alfred`, `--act`, `--prompt` |
 | `run.py` | entry point for Alfred and the fish function |
 | `make_plist.py` | source of `info.plist`: keyword filter → conditional → act or the prompt loop → notification |
@@ -540,7 +541,7 @@ The Alfred plumbing (the prompt loop through an external trigger, the conditiona
 | `bench.py` | per-keystroke latency, `--stress` |
 | `tests/` | pytest, `pytest-mock` for clock, clipboard and subprocess edges |
 
-Order of work: `bench.py` and the tree generator first (so every later step has a number), then `records.py`, `query.py`, `match.py`, `axes.py`, `tree.py`, `resolve.py`, `journal.py`, `actions.py`, `cli.py`, `alfred.py`.
+Order of work: `bench.py` and the tree generator first (so every later step has a number), then `records.py`, `query.py`, `match.py`, `axes.py`, `tree.py`, `resolve.py`, `journal.py`, `actions.py`, `session.py`, `cli.py`, `alfred.py`.
 
 Tests are written first. Every row of every table in this README is a parametrized case, each assert carrying its reason:
 
