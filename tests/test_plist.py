@@ -41,9 +41,10 @@ def test_keyword_needs_a_space_unless_asked_otherwise():
 def test_hotkey_opens_the_filter_with_an_empty_query():
     plist = make_plist.plist("0")
     hotkey = next(o for o in plist["objects"] if o["type"] == "alfred.workflow.trigger.hotkey")
-    assert hotkey["config"]["argument"] == 2 and hotkey["config"]["argumenttext"] == "", (
-        "the hotkey passes empty text, so mash opens on its browse list"
+    assert hotkey["config"]["argument"] == make_plist.TEXT_ARGUMENT, (
+        "argument 1 is Alfred's Text option; 2 would pass the clipboard"
     )
+    assert hotkey["config"]["argumenttext"] == "", "and the text is empty: the browse list"
     assert plist["connections"][hotkey["uid"]] == [make_plist.link(make_plist.FILTER)]
 
 

@@ -116,11 +116,14 @@ def call_external_trigger(uid, trigger_id):
     }
 
 
+TEXT_ARGUMENT = 1
+
+
 def hotkey(uid):
     return {
         "config": {
             "action": 0,
-            "argument": 2,
+            "argument": TEXT_ARGUMENT,
             "argumenttext": "",
             "focusedappvariable": False,
             "focusedappvariablename": "",
