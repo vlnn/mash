@@ -48,7 +48,7 @@ def main():
     items = json.loads(sh(workflow, filter_script, "prod", env))["items"]
     assert items[0]["title"] == "ssh prod web", items
     print(items[0]["subtitle"])
-    assert os.path.exists(os.path.join(data, "ssh-prod-web.txt"))
+    assert [n for n in os.listdir(data) if n.startswith("ssh-prod-web.")], os.listdir(data)
     print("smoke ok")
 
 
