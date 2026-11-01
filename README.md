@@ -1,6 +1,6 @@
-# mash
+# alfred-mash
 
-Fuzzy search over a tree of plain-text records you own, from fish and from Alfred.
+Fuzzy search over a tree of plain-text records you own, from fish and from Alfred. The repository is `alfred-mash`; the thing itself is just **mash**: the Alfred keyword is `m`, the fish command is `mash`, the records live in `~/.mash`.
 
 Type a few letters, get the thing. Type something it does not have, press ↩, now it has it. A record is a text file; a folder of records is a node; the folder tree is your structure. Some records are *rules*: instead of holding a value they hold a search, and resolving them runs that search — and the searches it finds, and so on — until a value comes out.
 
@@ -459,7 +459,7 @@ Exit status is 0 on a hit, 1 on none, so `mash prod; or echo no` works.
 
 Requirements: Alfred 5 with the Powerpack, Python 3.9+ (`/usr/bin/python3` after `xcode-select --install`). No packages.
 
-1. `make build` produces `dist/mash.alfredworkflow`; double-click it and press **Import**.
+1. `make build` produces `dist/alfred-mash.alfredworkflow`; double-click it and press **Import**.
 2. Configure: **Python** (absolute path), **Folder** (`~/.mash`), **Editor**, **Flows**.
 3. For `@keyword` hand-offs run once in Terminal and click OK:
    `osascript -e 'tell application id "com.runningwithcrayons.Alfred" to search "m"'`
@@ -510,7 +510,7 @@ uv sync
 make test           pytest on the project interpreter
 make test-system    the same on /usr/bin/python3
 make lint           ruff check + format
-make build          dist/mash.alfredworkflow
+make build          dist/alfred-mash.alfredworkflow
 make check          build, then drive the bundle's scripts the way Alfred would
 make bench
 ```
@@ -532,7 +532,7 @@ The Alfred plumbing (the prompt loop through an external trigger, the conditiona
 | `mash/cli.py` | `mash`, `-l`, `add`, `fill`, `forget`, `--resolve`, `--alfred`, `--act`, `--prompt` |
 | `run.py` | entry point for Alfred and the fish function |
 | `make_plist.py` | source of `info.plist`: keyword filter → conditional → act or the prompt loop → notification |
-| `scripts/build.py`, `scripts/smoke.py`, `scripts/make_icons.py` | build `dist/mash.alfredworkflow`; drive it the way Alfred would; draw the icons |
+| `scripts/build.py`, `scripts/smoke.py`, `scripts/make_icons.py` | build `dist/alfred-mash.alfredworkflow`; drive it the way Alfred would; draw the icons |
 | `fish/` | the `mash` and `stash` functions |
 | `bench.py` | per-keystroke latency, `--stress` |
 | `tests/` | pytest, `pytest-mock` for clock, clipboard and subprocess edges |

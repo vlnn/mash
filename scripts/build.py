@@ -4,7 +4,7 @@ import sys
 import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BUNDLE = os.path.join(ROOT, "dist", "mash.alfredworkflow")
+BUNDLE = os.path.join(ROOT, "dist", "alfred-mash.alfredworkflow")
 
 
 def files():

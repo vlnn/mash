@@ -6,7 +6,7 @@ import tempfile
 import zipfile
 
 BUNDLE = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dist", "mash.alfredworkflow"
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dist", "alfred-mash.alfredworkflow"
 )
 
 

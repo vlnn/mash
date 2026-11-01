@@ -183,7 +183,7 @@ def plist(version, with_space=True):
         "name": "mash",
         "readme": "Type m and a few letters. Records live in ~/.mash. See README.md.",
         "version": version,
-        "webaddress": "https://github.com/vlnn/mash",
+        "webaddress": "https://github.com/vlnn/alfred-mash",
         "disabled": False,
         "objects": [
             hotkey(HOTKEY),
