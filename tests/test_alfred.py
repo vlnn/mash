@@ -58,6 +58,14 @@ def test_add_row_names_the_node(home):
     }, "the add command carries node and text"
 
 
+def test_several_node_terms_compose_into_a_path(home):
+    result = home.items("rain/ pain/ main/ deep -> x")
+    assert titles(result)[0] == "Add to rain/pain/main/ (new node): deep -> x"
+    home.act(command(result["items"][0]))
+    assert titles(home.items("rain/pain/main/"))[0] == "deep", "the record landed three levels down"
+    assert titles(home.items("rain/"))[0] == "rain/pain/", "and the folders exist on the way"
+
+
 def test_add_row_says_when_the_node_is_new(home):
     result = home.items("new/ thing -> x")
     assert "(new node)" in result["items"][0]["title"], "adding into a missing node says so"

@@ -37,11 +37,9 @@ def search_query(node, axes, text):
 
 def take_node(text):
     terms = text.split()
-    nodes = [t for t in terms if is_node(t)]
-    if not nodes:
-        return "", text
-    remaining = [t for t in terms if t != nodes[0]]
-    return nodes[0].strip(NODE_END), " ".join(remaining)
+    parts = [t.strip(NODE_END) for t in terms if is_node(t)]
+    remaining = [t for t in terms if not is_node(t)]
+    return "/".join(parts), " ".join(remaining)
 
 
 def is_node(term):

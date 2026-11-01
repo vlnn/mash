@@ -285,6 +285,7 @@ m                        body/ · work/  ·  then every record
 m work/                  work/k8s/  ·  then everything under work/, including work/k8s/
 m work/ ctx              ctx anywhere under work/
 m work/k8s/ ctx          only in work/k8s/
+m work/ k8s/ ctx         the same: node terms in a row compose into one path
 m wo                     the node row  work/  ·  then matching records everywhere
 ```
 

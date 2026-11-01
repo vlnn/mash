@@ -41,6 +41,9 @@ def test_tags_are_separate_from_words(text, tags, words):
         ("ctx work/", "work", ("ctx",)),
         ("prod", "", ("prod",)),
         ("wo", "", ("wo",)),
+        ("rain/ pain/ main/", "rain/pain/main", ()),
+        ("rain/ pain/ main/ x", "rain/pain/main", ("x",)),
+        ("rain/pain/ main/", "rain/pain/main", ()),
     ],
 )
 def test_node_term(text, node, words):
@@ -82,6 +85,7 @@ def test_arrow_after_node_still_sets_axes():
         ("weight ~> weight kg", "weight", "~>", ""),
         ("work/ k8 ctx -> kubectl config use-context staging", "k8 ctx", "->", "work"),
         ("work/k8s/ ctx staging -> x", "ctx staging", "->", "work/k8s"),
+        ("rain/ pain/ main/ deep -> x", "deep", "->", "rain/pain/main"),
         ("standup -> {{date}};;done: {{done}}", "standup", "->", ""),
     ],
 )

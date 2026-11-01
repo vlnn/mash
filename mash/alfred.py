@@ -248,7 +248,7 @@ def records_arrow(text):
 def query_text_without_node(text, node):
     if not node:
         return text.strip()
-    return " ".join(t for t in text.split() if t != node + "/").strip()
+    return " ".join(t for t in text.split() if not queries.is_node(t)).strip()
 
 
 def dumps(command):
