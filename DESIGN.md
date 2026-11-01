@@ -6,7 +6,44 @@ This is the map. The README is the manual, with every rule and table; this is th
 
 mash is a fuzzy-searchable tree of small text files, where a file is either a **value** or a **search**, and every search can be ordered by how well it matches, how recently you used it, or where it lives.
 
-## 1. The tree: folders are structure
+## 1. Records: one file, head on line 1
+
+**For:** data you can `cat`, `git diff`, and edit in anything. The head is what you search by and what you see; the arrow says what the rest is.
+
+```
+ssh prod web -> ssh deploy@10.0.1.5
+```
+
+Everything after the first arrow on line 1, plus every following line verbatim, is the body. No metadata lives in the file. The file name is `slug.id.txt`: the slug is for you, the six-character id is the record's identity (section 9).
+
+## 2. Facts and rules: `->` is a value, anything else is a search
+
+**For:** letting a record *point* instead of *hold*. A fact ends the chain; a rule continues it.
+
+```
+weight kg #body -> 80            a fact: ↩ copies 80
+weight ~> weight kg              a rule: ↩ searches "weight kg", oldest-touched first, and acts on the best hit
+k8 => kubernetes kube            a synonym is a rule
+reading now => #reading          a saved view is a rule
+```
+
+Rules resolve only on ↩, never while typing (Alfred runs the script on every keystroke; nested searches would multiply). A rule whose best hit is another rule keeps going, up to 8 steps, and the chain is shown: `weight → weight kg #body → 80`.
+
+## 3. The arrow alphabet: axes you can compose
+
+**For:** saying *how* to search without a second syntax. The characters before `>` each name an axis and a direction, left to right.
+
+```
+=>     defaults: relevance, then newest-touched, whole tree
+~>     time reversed: oldest-touched first
+/>     structure: only this record's own subtree
+#>     only records sharing one of this rule's tags
+~/>    oldest first, within the subtree
+```
+
+The same arrow typed at the start of a query applies to that query: `m ~> weight kg` and the rule `weight ~> weight kg` run the identical search. `=` carries no axis, so `=~>` is `~>`. New axes get new characters; this is the slot where a calendar axis would go.
+
+## 4. The tree: folders are structure
 
 **For:** keeping and finding things without proper names — the way your brain sometimes knows the thing but forgets what it's called. `work/cli/` is a place; you can walk into it and look around, and a record inside it doesn't need "work" or "cli" in its words. What the thing *is about* goes in the words or a tag, where search can reach it; where it *belongs* is the folder.
 
@@ -30,44 +67,21 @@ m                      the root's folders first, then everything
 
 A node exists when its folder does. Naming a node in a query narrows the search to that subtree and never looks at siblings or ancestors. An empty query lists the current node's folders before its records, so the tree is browsable top-down without typing a name.
 
-## 2. Records: one file, head on line 1
+## 5. Tags: dynamic views across the tree
 
-**For:** data you can `cat`, `git diff`, and edit in anything. The head is what you search by and what you see; the arrow says what the rest is.
-
-```
-ssh prod web -> ssh deploy@10.0.1.5
-```
-
-Everything after the first arrow on line 1, plus every following line verbatim, is the body. No metadata lives in the file. The file name is `slug.id.txt`: the slug is for you, the six-character id is the record's identity (section 9).
-
-## 3. Facts and rules: `->` is a value, anything else is a search
-
-**For:** letting a record *point* instead of *hold*. A fact ends the chain; a rule continues it.
+**For:** grouping that cuts across folders. `#reading` reaches into every node; folders are where a thing lives, tags are what it's part of.
 
 ```
-weight kg #body -> 80            a fact: ↩ copies 80
-weight ~> weight kg              a rule: ↩ searches "weight kg", oldest-touched first, and acts on the best hit
-k8 => kubernetes kube            a synonym is a rule
-reading now => #reading          a saved view is a rule
+paper attention #reading #ml -> https://arxiv.org/abs/1706.03762
+book snow crash #reading -> Stephenson, 1992
+
+m #reading             everything tagged #reading, anywhere
+m #ml #reading snow    both tags, narrowed by a word
 ```
 
-Rules resolve only on ↩, never while typing (Alfred runs the script on every keystroke; nested searches would multiply). A rule whose best hit is another rule keeps going, up to 8 steps, and the chain is shown: `weight → weight kg #body → 80`.
+The one special rule: a term matches a tag only as a **prefix** of it. `#re` finds `#read` and `#reading`; `#reading` never finds `#read`. A plain word (`read`) matches tags the same way. Nothing defines a tag; it exists because records carry it.
 
-## 4. The arrow alphabet: axes you can compose
-
-**For:** saying *how* to search without a second syntax. The characters before `>` each name an axis and a direction, left to right.
-
-```
-=>     defaults: relevance, then newest-touched, whole tree
-~>     time reversed: oldest-touched first
-/>     structure: only this record's own subtree
-#>     only records sharing one of this rule's tags
-~/>    oldest first, within the subtree
-```
-
-The same arrow typed at the start of a query applies to that query: `m ~> weight kg` and the rule `weight ~> weight kg` run the identical search. `=` carries no axis, so `=~>` is `~>`. New axes get new characters; this is the slot where a calendar axis would go.
-
-## 5. Search: four head tiers, then the body
+## 6. Search: four head tiers, then the body
 
 **For:** typing as little as possible, in any order, and still getting the right thing first.
 
@@ -83,33 +97,7 @@ Every query word must match somewhere; scores add up; a head hit always beats a 
 
 Ties: fewer head words first (the tighter record), then most recently touched.
 
-## 6. Tags: dynamic views across the tree
-
-**For:** grouping that cuts across folders. `#reading` reaches into every node; folders are where a thing lives, tags are what it's part of.
-
-```
-paper attention #reading #ml -> https://arxiv.org/abs/1706.03762
-book snow crash #reading -> Stephenson, 1992
-
-m #reading             everything tagged #reading, anywhere
-m #ml #reading snow    both tags, narrowed by a word
-```
-
-The one special rule: a term matches a tag only as a **prefix** of it. `#re` finds `#read` and `#reading`; `#reading` never finds `#read`. A plain word (`read`) matches tags the same way. Nothing defines a tag; it exists because records carry it.
-
-## 7. Placeholders: blanks filled when used
-
-**For:** commands and links with a variable part, without storing one record per value.
-
-```
-ssh box -> ssh {{user=root}}@{{host}} -p {{port=22}}
-jira -> https://example.atlassian.net/browse/{{ticket}}
-standup -> {{date}} standup;;done: {{done}}
-```
-
-↩ prompts for each blank in order (what you typed, the default, the clipboard), then acts on the result. `{{date}}`, `{{time}}` and `{{clipboard}}` fill themselves; the first two also show filled in the list, the clipboard is read only on ↩. `;;` is a newline when typed in Alfred's one-line box.
-
-## 8. Adding: whatever you typed is an offer
+## 7. Adding: whatever you typed is an offer
 
 **For:** zero friction between "I searched for it and it wasn't there" and "now it is".
 
@@ -121,6 +109,18 @@ m delany @kobold               usable text with a hit → a Run row between hits
 ```
 
 Add is always present and, without an arrow, always last. There is no add mode.
+
+## 8. Placeholders: blanks filled when used
+
+**For:** commands and links with a variable part, without storing one record per value.
+
+```
+ssh box -> ssh {{user=root}}@{{host}} -p {{port=22}}
+jira -> https://example.atlassian.net/browse/{{ticket}}
+standup -> {{date}} standup;;done: {{done}}
+```
+
+↩ prompts for each blank in order (what you typed, the default, the clipboard), then acts on the result. `{{date}}`, `{{time}}` and `{{clipboard}}` fill themselves; the first two also show filled in the list, the clipboard is read only on ↩. `;;` is a newline when typed in Alfred's one-line box.
 
 ## 9. Ids and the journal: identity and time
 
