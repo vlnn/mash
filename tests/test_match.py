@@ -62,6 +62,10 @@ def test_tag_prefix_rule(term, tag, expected):
         ("prod", "pihole prod finished", 8),
         ("prod", "grafana -> https://grafana.example.com/d/x", 0),
         ("grafana", "latency -> https://grafana.example.com/d/x", 1),
+        ("gr ex", "latency -> https://grafana.example.com/d/x", 2),
+        ("grf exmpl", "latency -> https://grafana.example.com/d/x", 2),
+        ("example.com", "latency -> https://grafana.example.com/d/x", 0),
+        ("4000", "local -> http://127.0.0.1:4000", 1),
         ("x", "deploy -> deploy@10.0.1.5", 0),
     ],
 )
