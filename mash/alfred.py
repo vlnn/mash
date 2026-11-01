@@ -1,10 +1,8 @@
 import json
 import os
-import shlex
-import subprocess
 from typing import NamedTuple
 
-from mash import actions, fill, resolve, search
+from mash import actions, fill, resolve, search, tree
 from mash import query as queries
 from mash import records as record_grammar
 
@@ -19,6 +17,8 @@ class Settings(NamedTuple):
 
 
 def read_clipboard():
+    import subprocess
+
     return subprocess.run(["pbpaste"], capture_output=True, check=False).stdout.decode("utf-8")
 
 
@@ -32,6 +32,7 @@ class Session:
         query = queries.parse(search_text(text))
         stored = self.tree.load()
         hits = search.search(stored, query, self.journal.touched())
+        self.nodes = tree.node_counts(stored)
         rows = self.node_rows(query, text) + [
             self.row(hit) for hit in hits[: self.settings.max_results]
         ]
@@ -55,7 +56,7 @@ class Session:
         prefix = query.words[0].lower() if query.words else ""
         return [
             node_row(node, count)
-            for node, count in sorted(self.tree.nodes().items())
+            for node, count in sorted(self.nodes.items())
             if node.split("/")[-1].lower().startswith(prefix)
         ]
 
@@ -101,7 +102,7 @@ class Session:
     def add_row(self, query, text):
         node = query.node
         where = f"Add to {node}/" if node else "Add"
-        if node and node not in self.tree.nodes():
+        if node and node not in self.nodes:
             where += " (new node)"
         shown = query_text_without_node(text, node)
         record = query.add or record_grammar.from_box(shown)
@@ -165,6 +166,9 @@ class Session:
         return f"Added to {node + '/' if node else '.'}: {record.head}"
 
     def edit(self, stored):
+        import shlex
+        import subprocess
+
         command = [
             part.replace("{file}", stored.path) for part in shlex.split(self.settings.editor)
         ]

@@ -12,10 +12,14 @@ class Hit(NamedTuple):
 
 def search(stored_records, query, touched=None):
     touched = touched or {}
-    candidates = (s for s in stored_records if axes.in_subtree(query.node, s))
-    hits = (Hit(match.score(query, s.record), s, time_of(s, touched)) for s in candidates)
-    if query.words or query.tags:
-        hits = (hit for hit in hits if hit.score)
+    browsing = not query.words and not query.tags
+    hits = []
+    for stored in stored_records:
+        if not axes.in_subtree(query.node, stored):
+            continue
+        points = match.score(query, stored.record)
+        if points or browsing:
+            hits.append(Hit(points, stored, time_of(stored, touched)))
     return axes.order(hits, query.axes)
 
 

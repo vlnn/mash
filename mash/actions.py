@@ -1,6 +1,5 @@
 import os
 import re
-import subprocess
 from typing import NamedTuple
 
 URL = re.compile(r"^(https?|file)://\S+$")
@@ -49,6 +48,8 @@ def parse_flows(text):
 
 
 def perform(action):
+    import subprocess
+
     if action.kind == "copy":
         subprocess.run(["pbcopy"], input=action.target.encode("utf-8"), check=True)
     elif action.kind == "open":
@@ -59,6 +60,8 @@ def perform(action):
 
 
 def paste():
+    import subprocess
+
     script = 'tell application "System Events" to keystroke "v" using command down'
     subprocess.run(["osascript", "-e", script], check=False)
 

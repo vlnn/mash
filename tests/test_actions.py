@@ -71,19 +71,19 @@ def test_flows_setting_parses_name_keyword_pairs(text, expected):
 
 
 def test_perform_copy_uses_pbcopy(mocker):
-    run = mocker.patch("mash.actions.subprocess.run")
+    run = mocker.patch("subprocess.run")
     perform(Action("copy", "hello"))
     run.assert_called_once_with(["pbcopy"], input=b"hello", check=True)
 
 
 def test_perform_open_uses_open(mocker):
-    run = mocker.patch("mash.actions.subprocess.run")
+    run = mocker.patch("subprocess.run")
     perform(Action("open", "https://x"))
     run.assert_called_once_with(["open", "https://x"], check=True)
 
 
 def test_perform_handoff_drives_alfred(mocker):
-    run = mocker.patch("mash.actions.subprocess.run")
+    run = mocker.patch("subprocess.run")
     perform(Action("handoff", "kb delany"))
     args = run.call_args[0][0]
     assert args[0] == "osascript", "a hand-off should go through osascript"

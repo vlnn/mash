@@ -1,6 +1,5 @@
 import json
 import os
-import shutil
 import sys
 
 from mash import actions, alfred, fill, resolve, search
@@ -144,6 +143,8 @@ def forget(argv):
 
 
 def forget_node(current, node):
+    import shutil
+
     path = os.path.join(current.tree.root, *node.split("/"))
     if not os.path.isdir(path):
         print(f"no node {node}/", file=sys.stderr)

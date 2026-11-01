@@ -1,9 +1,12 @@
 import os
+import pickle
 from typing import NamedTuple
 
 from mash import records
 
 EXTENSION = ".txt"
+INDEX = ".index"
+INDEX_VERSION = "mash-index-1"
 
 
 class Stored(NamedTuple):
@@ -18,10 +21,33 @@ class Tree:
         self.root = root
 
     def load(self):
-        return [
-            Stored(read_record(entry.path), node, entry.path, entry.stat().st_mtime)
-            for node, entry in self.record_entries()
-        ]
+        index = self.read_index()
+        fresh, changed = {}, False
+        for node, entry in self.record_entries():
+            mtime = entry.stat().st_mtime
+            cached = index.get(entry.path)
+            if cached and cached[0] == mtime:
+                fresh[entry.path] = cached
+            else:
+                fresh[entry.path] = (mtime, node, read_record(entry.path))
+                changed = True
+        if changed or len(fresh) != len(index):
+            self.write_index(fresh)
+        return [Stored(record, node, path, mtime) for path, (mtime, node, record) in fresh.items()]
+
+    def read_index(self):
+        try:
+            with open(os.path.join(self.root, INDEX), "rb") as f:
+                version, index = pickle.load(f)
+        except (OSError, pickle.UnpicklingError, EOFError, ValueError, TypeError):
+            return {}
+        return index if version == INDEX_VERSION else {}
+
+    def write_index(self, index):
+        if os.path.isdir(self.root):
+            write_bytes_atomically(
+                os.path.join(self.root, INDEX), pickle.dumps((INDEX_VERSION, index))
+            )
 
     def read(self, path):
         return Stored(read_record(path), self.node_of(path), path, os.stat(path).st_mtime)
@@ -72,6 +98,16 @@ class Tree:
         return "" if relative == "." else relative.replace(os.sep, "/")
 
 
+def node_counts(stored_records):
+    counts = {}
+    for stored in stored_records:
+        node = stored.node
+        while node:
+            counts[node] = counts.get(node, 0) + 1
+            node = node.rpartition("/")[0]
+    return counts
+
+
 def read_record(path):
     with open(path, encoding="utf-8", errors="surrogateescape") as f:
         return records.parse(f.read())
@@ -91,7 +127,11 @@ def free_path(folder, slug):
 
 
 def write_atomically(path, text):
+    write_bytes_atomically(path, text.encode("utf-8", errors="surrogateescape"))
+
+
+def write_bytes_atomically(path, data):
     temporary = path + ".tmp"
-    with open(temporary, "w", encoding="utf-8", errors="surrogateescape") as f:
-        f.write(text)
+    with open(temporary, "wb") as f:
+        f.write(data)
     os.replace(temporary, path)

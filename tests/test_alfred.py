@@ -202,7 +202,7 @@ def test_act_delete_removes_file_and_journal(home, mocker):
 
 
 def test_act_edit_runs_the_editor(home, mocker):
-    run = mocker.patch("mash.alfred.subprocess.run")
+    run = mocker.patch("subprocess.run")
     session = alfred.Session(home.tree, home.journal, alfred.Settings(editor="code -g {file}"))
     row = session.items("prod")["items"][0]
     cmd = command(row, "cmd")
