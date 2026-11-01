@@ -2,7 +2,7 @@ import json
 import os
 import sys
 
-from mash import actions, alfred, fill, resolve, search
+from mash import actions, alfred, fill, search
 from mash import query as queries
 from mash.journal import Journal
 from mash.tree import Tree
@@ -71,17 +71,18 @@ def main(argv=None):
     return best(argv)
 
 
-def find(current, argv):
+def find(current, snapshot, argv):
     query = queries.parse(" ".join(argv))
-    return search.search(current.tree.load(), query, current.journal.touched())
+    return search.search(snapshot.records, query, current.journal.touched())
 
 
 def best(argv):
     current = session()
-    hits = find(current, argv)
+    snapshot = current.tree.load()
+    hits = find(current, snapshot, argv)
     if not hits:
         return 1
-    chain = current.resolve_chain(hits[0].stored)
+    chain = current.resolve_chain(snapshot, hits[0].stored)
     if chain.fact is None:
         print(chain.error, file=sys.stderr)
         return 1
@@ -94,7 +95,7 @@ def best(argv):
 @command("-l")
 def listing(argv):
     current = session()
-    hits = find(current, argv)
+    hits = find(current, current.tree.load(), argv)
     for hit in hits:
         record = hit.stored.record
         first = (f"{record.arrow} {record.query}" if record.is_rule else record.body).split("\n")[0]
@@ -125,7 +126,7 @@ def forget(argv):
         return forget_node(current, argv[1].rstrip("/"))
     history_only = argv[:1] == ["--journal"]
     words = argv[1:] if history_only else argv
-    hits = find(current, words)
+    hits = find(current, current.tree.load(), words)
     if not hits:
         print("nothing matches", file=sys.stderr)
         return 1
@@ -148,7 +149,7 @@ def forget_node(current, node):
     if not os.path.isdir(path):
         print(f"no node {node}/", file=sys.stderr)
         return 1
-    count = current.tree.nodes().get(node, 0)
+    count = current.tree.load().folders.get(node, 0)
     if not confirm(f"remove {node}/ with {count} records ({path})"):
         return 1
     shutil.rmtree(path)
@@ -184,10 +185,11 @@ def alfred_prompt(argv):
 @command("--resolve")
 def resolve_command(argv):
     current = session()
-    hits = find(current, argv)
+    snapshot = current.tree.load()
+    hits = find(current, snapshot, argv)
     if not hits:
         return 1
-    chain = resolve.resolve(current.tree.load(), hits[0].stored, current.journal.touched())
+    chain = current.resolve_chain(snapshot, hits[0].stored)
     print(" → ".join(s.record.head for s in chain.chain), chain.error or "", sep="  ")
     return 0 if chain.fact else 1
 

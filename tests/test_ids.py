@@ -22,7 +22,7 @@ def test_same_head_twice_gives_two_records_with_their_own_ids(tmp_path):
     tree = Tree(str(tmp_path))
     tree.add("", from_box("weight kg -> 80"))
     tree.add("", from_box("weight kg -> 79"))
-    stored = tree.load()
+    stored = tree.load().records
     assert len({s.identity for s in stored}) == 2, "identities differ"
     assert {s.record.body for s in stored} == {"80", "79"}, "both records are there"
 
@@ -41,15 +41,15 @@ def test_hand_made_file_without_id_is_identified_by_its_place():
 def test_renaming_the_slug_keeps_the_identity(tmp_path):
     tree = Tree(str(tmp_path))
     path = tree.add("", from_box("old head -> x"))
-    before = tree.load()[0].identity
+    before = tree.load().records[0].identity
     os.rename(path, path.replace("old-head", "new-head"))
-    assert tree.load()[0].identity == before, "the id survives a rename that keeps it"
+    assert tree.load().records[0].identity == before, "the id survives a rename that keeps it"
 
 
 def test_moving_between_nodes_keeps_the_identity(tmp_path):
     tree = Tree(str(tmp_path))
     path = tree.add("", from_box("moved -> x"))
-    before = tree.load()[0].identity
+    before = tree.load().records[0].identity
     os.makedirs(tmp_path / "work")
     os.rename(path, str(tmp_path / "work" / os.path.basename(path)))
-    assert tree.load()[0].identity == before, "the id survives a move"
+    assert tree.load().records[0].identity == before, "the id survives a move"

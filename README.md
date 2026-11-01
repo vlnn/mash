@@ -524,7 +524,7 @@ The Alfred plumbing (the prompt loop through an external trigger, the conditiona
 |---|---|
 | `mash/records.py` | record grammar: first line → head, arrow, body; `;;` from the box; file name from head ↔ `Record` |
 | `mash/query.py` | box grammar: terms, `#tags`, `node/`, leading arrow ↔ `Query` |
-| `mash/tree.py` | the folder: walk nodes, read records, the mtime-keyed index, write and delete files; atomic writes |
+| `mash/tree.py` | the folder: one walk → `Snapshot` (records plus every folder with its subtree count), the mtime-keyed index, write and delete files; atomic writes |
 | `mash/match.py` | one regex per word, the four head tiers and the body tier, scoring |
 | `mash/axes.py` | relevance, time, structure as `records → records`; composition from an arrow |
 | `mash/resolve.py` | rules: context, best hit, recursion, depth cap, chain |

@@ -6,7 +6,7 @@ from mash.tree import INDEX, Tree
 
 
 def heads(tree):
-    return sorted(s.record.head for s in tree.load())
+    return sorted(s.record.head for s in tree.load().records)
 
 
 def test_index_file_appears_after_first_load(tmp_path):
@@ -33,7 +33,7 @@ def test_changed_file_is_reparsed(tmp_path):
     with open(path, "w", encoding="utf-8") as f:
         f.write("a -> 2\n")
     os.utime(path, (2_000_000_000, 2_000_000_000))
-    assert Tree(str(tmp_path)).load()[0].record.body == "2", "a newer mtime means reparse"
+    assert Tree(str(tmp_path)).load().records[0].record.body == "2", "a newer mtime means reparse"
 
 
 def test_deleted_file_leaves_the_index(tmp_path):

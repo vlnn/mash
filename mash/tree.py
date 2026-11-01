@@ -26,14 +26,27 @@ class Stored(NamedTuple):
         return identity_of(self.node, self.name)
 
 
+class Snapshot(NamedTuple):
+    records: list
+    folders: dict
+
+    def children(self, node):
+        return sorted(folder for folder in self.folders if parent_of(folder) == node)
+
+    def named_like(self, prefix):
+        prefix = prefix.lower()
+        return sorted(f for f in self.folders if f.rpartition("/")[2].lower().startswith(prefix))
+
+
 class Tree:
     def __init__(self, root):
         self.root = root
 
     def load(self):
+        folders, files = self.walk()
         index = self.read_index()
         fresh, changed = {}, False
-        for node, entry in self.record_entries():
+        for node, entry in files:
             mtime = entry.stat().st_mtime
             cached = index.get(entry.path)
             if cached and cached[0] == mtime:
@@ -43,7 +56,8 @@ class Tree:
                 changed = True
         if changed or len(fresh) != len(index):
             self.write_index(fresh)
-        return [Stored(record, node, path, mtime) for path, (mtime, node, record) in fresh.items()]
+        records = stored_from(fresh)
+        return Snapshot(records, subtree_counts(folders, records))
 
     def read_index(self):
         try:
@@ -62,9 +76,10 @@ class Tree:
     def read(self, path):
         return Stored(read_record(path), self.node_of(path), path, os.stat(path).st_mtime)
 
-    def record_entries(self):
+    def walk(self):
+        folders, files = [], []
         if not os.path.isdir(self.root):
-            return
+            return folders, files
         pending = [(self.root, "")]
         while pending:
             folder, node = pending.pop()
@@ -73,30 +88,12 @@ class Tree:
                     if entry.name.startswith("."):
                         continue
                     if entry.is_dir():
-                        pending.append((entry.path, join_node(node, entry.name)))
+                        child = join_node(node, entry.name)
+                        folders.append(child)
+                        pending.append((entry.path, child))
                     elif entry.name.endswith(EXTENSION):
-                        yield node, entry
-
-    def children(self, node):
-        folder = os.path.join(self.root, *node.split("/")) if node else self.root
-        if not os.path.isdir(folder):
-            return []
-        with os.scandir(folder) as entries:
-            names = sorted(e.name for e in entries if e.is_dir() and not e.name.startswith("."))
-        return [join_node(node, name) for name in names]
-
-    def nodes(self):
-        counts = {}
-        for dirpath, dirnames, filenames in os.walk(self.root):
-            dirnames[:] = [d for d in dirnames if not d.startswith(".")]
-            node = self.node_of(os.path.join(dirpath, "x"))
-            if node:
-                counts[node] = sum(1 for n in filenames if n.endswith(EXTENSION))
-        for node in sorted(counts, key=len, reverse=True):
-            parent = os.path.dirname(node)
-            if parent:
-                counts[parent] += counts[node]
-        return counts
+                        files.append((node, entry))
+        return folders, files
 
     def add(self, node, record):
         folder = os.path.join(self.root, *node.split("/")) if node else self.root
@@ -116,14 +113,22 @@ class Tree:
         return "" if relative == "." else relative.replace(os.sep, "/")
 
 
-def node_counts(stored_records):
-    counts = {}
+def stored_from(index):
+    return [Stored(record, node, path, mtime) for path, (mtime, node, record) in index.items()]
+
+
+def subtree_counts(folders, stored_records):
+    counts = dict.fromkeys(folders, 0)
     for stored in stored_records:
         node = stored.node
         while node:
             counts[node] = counts.get(node, 0) + 1
-            node = node.rpartition("/")[0]
+            node = parent_of(node)
     return counts
+
+
+def parent_of(node):
+    return node.rpartition("/")[0]
 
 
 def read_record(path):

@@ -91,6 +91,22 @@ def test_empty_folders_are_listed_too(home):
     assert row["subtitle"].startswith("0 records"), "a folder with no records still shows"
 
 
+def test_empty_folder_is_offered_by_prefix_too(home):
+    import os
+
+    os.makedirs(os.path.join(home.tree.root, "empty"))
+    assert titles(home.items("em"))[0] == "empty/", "an empty folder is a node like any other"
+
+
+def test_adding_into_an_existing_empty_folder_is_not_a_new_node(home):
+    import os
+
+    os.makedirs(os.path.join(home.tree.root, "empty"))
+    assert titles(home.items("empty/ x -> y"))[0] == "Add to empty/: x -> y", (
+        "the folder exists, so the add row must not call it new"
+    )
+
+
 def test_node_row_offers_autocomplete(home):
     result = home.items("wo")
     row = result["items"][0]

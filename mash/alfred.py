@@ -2,7 +2,7 @@ import json
 import os
 from typing import NamedTuple
 
-from mash import actions, fill, resolve, search, tree
+from mash import actions, fill, resolve, search
 from mash import query as queries
 from mash import records as record_grammar
 
@@ -29,34 +29,18 @@ class Session:
 
     def items(self, text):
         query = queries.parse(search_text(text))
-        stored = self.tree.load()
-        hits = search.search(stored, query, self.journal.touched())
-        self.nodes = tree.node_counts(stored)
-        rows = self.node_rows(query, text) + [
+        snapshot = self.tree.load()
+        hits = search.search(snapshot.records, query, self.journal.touched())
+        rows = node_rows(query, snapshot) + [
             self.row(hit) for hit in hits[: self.settings.max_results]
         ]
         if query.add:
-            rows.insert(0, self.add_row(query, text))
+            rows.insert(0, add_row(query, text, snapshot))
         else:
             if hits and usable(text):
                 rows.append(run_row(text))
-            rows.append(self.add_row(query, text))
+            rows.append(add_row(query, text, snapshot))
         return {"items": rows, "variables": {"prompt": "0"}}
-
-    def node_rows(self, query, text):
-        if query.add or query.tags or len(query.words) > 1:
-            return []
-        if not query.words:
-            children = self.tree.children(query.node)
-            return [node_row(child, self.nodes.get(child, 0)) for child in children]
-        if query.node:
-            return []
-        prefix = query.words[0].lower()
-        return [
-            node_row(node, count)
-            for node, count in sorted(self.nodes.items())
-            if node.split("/")[-1].lower().startswith(prefix)
-        ]
 
     def row(self, hit):
         record = hit.stored.record
@@ -97,22 +81,6 @@ class Session:
     def detail(self, stored):
         return f"{stored.path} · {self.subtitle(stored.record)}"
 
-    def add_row(self, query, text):
-        node = query.node
-        where = f"Add to {node}/" if node else "Add"
-        if node and node not in self.nodes:
-            where += " (new node)"
-        shown = query_text_without_node(text, node)
-        record = query.add or record_grammar.from_box(shown)
-        return {
-            "title": f"{where}: {shown}",
-            "subtitle": fill.preview(record.body)
-            if not record.is_rule
-            else f"rule {record.arrow} {record.query}",
-            "arg": dumps({"do": "add", "node": node, "text": shown}),
-            "icon": {"path": "add.png"},
-        }
-
     def act(self, command):
         do = command["do"]
         if do == "add":
@@ -128,7 +96,7 @@ class Session:
         return self.use(stored, mode, command.get("values", {}))
 
     def use(self, stored, mode, values):
-        chain = self.resolve_chain(stored)
+        chain = self.resolve_chain(self.tree.load(), stored)
         if chain.fact is None:
             return f"Could not resolve: {chain.error}"
         body = fill.fill(chain.fact.record.body, values, read_clipboard)
@@ -141,8 +109,8 @@ class Session:
             return " → ".join([s.record.head for s in chain.chain] + [body.split("\n")[0]])
         return message
 
-    def resolve_chain(self, stored):
-        return resolve.resolve(self.tree.load(), stored, self.journal.touched())
+    def resolve_chain(self, snapshot, stored):
+        return resolve.resolve(snapshot.records, stored, self.journal.touched())
 
     def do(self, body, mode):
         action = actions.decide(body, os.path.exists, self.settings.flows)
@@ -209,6 +177,18 @@ def act(path, mode):
     return {"do": "act", "path": path, "mode": mode}
 
 
+def node_rows(query, snapshot):
+    if query.add or query.tags or len(query.words) > 1:
+        return []
+    if not query.words:
+        nodes = snapshot.children(query.node)
+    elif query.node:
+        nodes = []
+    else:
+        nodes = snapshot.named_like(query.words[0])
+    return [node_row(node, snapshot.folders[node]) for node in nodes]
+
+
 def node_row(node, count):
     plural = "record" if count == 1 else "records"
     return {
@@ -217,6 +197,23 @@ def node_row(node, count):
         "autocomplete": f"{node}/ ",
         "valid": False,
         "icon": NODE_ICON,
+    }
+
+
+def add_row(query, text, snapshot):
+    node = query.node
+    where = f"Add to {node}/" if node else "Add"
+    if node and node not in snapshot.folders:
+        where += " (new node)"
+    shown = query_text_without_node(text, node)
+    record = query.add or record_grammar.from_box(shown)
+    return {
+        "title": f"{where}: {shown}",
+        "subtitle": fill.preview(record.body)
+        if not record.is_rule
+        else f"rule {record.arrow} {record.query}",
+        "arg": dumps({"do": "add", "node": node, "text": shown}),
+        "icon": {"path": "add.png"},
     }
 
 
