@@ -21,10 +21,13 @@ Everything after the first arrow on line 1, plus every following line verbatim, 
 **For:** letting a record *point* instead of *hold*. A fact ends the chain; a rule continues it.
 
 ```
-weight kg #body -> 80            a fact: ↩ copies 80
-weight ~> weight kg              a rule: ↩ searches "weight kg", oldest-touched first, and acts on the best hit
-k8 => kubernetes kube            a synonym is a rule
-reading now => #reading          a saved view is a rule
+weight kg #body -> 80            a fact: ↩ copies 80 and shows "Copied: 80"
+weight kg #body -> 79            another fact, added a week later
+weight ~> weight kg              a rule: ↩ searches "weight kg" oldest-touched first; with the two facts
+                                 above that finds the 80, so ↩ copies 80 and shows "weight → weight kg #body → 80"
+weight now => weight kg          the same search newest first: ↩ copies 79
+k8 => kubernetes kube            a synonym is a rule: ↩ copies whatever the best "kubernetes kube" record holds
+reading now => #reading          a saved view is a rule: ↩ opens the most recently touched #reading link
 ```
 
 Rules resolve only on ↩, never while typing (Alfred runs the script on every keystroke; nested searches would multiply). A rule whose best hit is another rule keeps going, up to 8 steps, and the chain is shown: `weight → weight kg #body → 80`.
