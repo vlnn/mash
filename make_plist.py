@@ -11,7 +11,7 @@ IS_PROMPT = "C0ND1710-0000-4000-8000-000000000001"
 HAS_MORE = "C0ND1710-0000-4000-8000-000000000002"
 
 
-def script_filter(uid, script, keyword=None, title=""):
+def script_filter(uid, script, keyword=None, title="", with_space=True):
     config = {
         "alfredfiltersresults": False,
         "argumenttrimmode": 0,
@@ -28,7 +28,7 @@ def script_filter(uid, script, keyword=None, title=""):
         "subtext": "",
         "title": title,
         "type": 0,
-        "withspace": True,
+        "withspace": with_space,
     }
     if keyword:
         config["keyword"] = keyword
@@ -120,7 +120,8 @@ def hotkey(uid):
     return {
         "config": {
             "action": 0,
-            "argument": 0,
+            "argument": 2,
+            "argumenttext": "",
             "focusedappvariable": False,
             "focusedappvariablename": "",
             "hotkey": 0,
@@ -173,7 +174,7 @@ def checkbox(name, label, description):
     }
 
 
-def plist(version):
+def plist(version, with_space=True):
     return {
         "bundleid": BUNDLE,
         "category": "Productivity",
@@ -186,7 +187,9 @@ def plist(version):
         "disabled": False,
         "objects": [
             hotkey(HOTKEY),
-            script_filter(FILTER, f'{PYTHON} --alfred "$1"', keyword="m", title="mash"),
+            script_filter(
+                FILTER, f'{PYTHON} --alfred "$1"', keyword="m", title="mash", with_space=with_space
+            ),
             conditional(DECIDE, IS_PROMPT, "prompt", "needs blanks"),
             script_filter(PROMPT, f'{PYTHON} --prompt "$state" "$1"', title="fill a blank"),
             conditional(MORE, HAS_MORE, "more", "more blanks"),
@@ -233,9 +236,10 @@ def plist(version):
 
 
 def main():
-    version = sys.argv[1] if len(sys.argv) > 1 else "0.1.0"
+    arguments = [a for a in sys.argv[1:] if not a.startswith("--")]
+    version = arguments[0] if arguments else "0.1.0"
     with open("info.plist", "wb") as f:
-        plistlib.dump(plist(version), f, sort_keys=True)
+        plistlib.dump(plist(version, with_space="--no-space" not in sys.argv), f, sort_keys=True)
 
 
 if __name__ == "__main__":

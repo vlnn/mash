@@ -463,7 +463,9 @@ Requirements: Alfred 5 with the Powerpack, Python 3.9+ (`/usr/bin/python3` after
 3. For `@keyword` hand-offs run once in Terminal and click OK:
    `osascript -e 'tell application id "com.runningwithcrayons.Alfred" to search "m"'`
 
-Keyword `m`; hyper+M opens it too. Alfred runs the script on every keystroke and cancels a running one when you type the next letter. Alfred also learns which rows you pick and moves them up; mash's journal does the same across both surfaces.
+Keyword `m`, and a hotkey that opens mash straight on its browse list (unassigned by default; set it on the *Hotkey* node, hyper+M is a good one). Alfred runs the script on every keystroke and cancels a running one when you type the next letter. Alfred also learns which rows you pick and moves them up; mash's journal does the same across both surfaces.
+
+A bare `m` without a space shows Alfred's own results (Mail, Music…) with the mash row among them; the space is what hands the query to mash. That is Alfred's rule for keywords that *require a space*. The alternative is a keyword that does not: `make build PLIST_FLAGS=--no-space` builds that bundle, and then `m` alone is the browse list — but so is `ma`, `mu` and anything else starting with `m`, so you would launch Mail some other way. The hotkey sidesteps the question: it opens mash with an empty query and nothing else in the list.
 
 | setting | default | meaning |
 |---|---|---|

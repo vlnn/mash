@@ -20,9 +20,8 @@ def files():
 
 
 def main():
-    version = sys.argv[1] if len(sys.argv) > 1 else "0.1.0"
     os.chdir(ROOT)
-    subprocess.run([sys.executable, "make_plist.py", version], check=True)
+    subprocess.run([sys.executable, "make_plist.py", *sys.argv[1:]], check=True)
     subprocess.run([sys.executable, "scripts/make_icons.py"], check=True)
     os.makedirs("dist", exist_ok=True)
     with zipfile.ZipFile(BUNDLE, "w", zipfile.ZIP_DEFLATED) as bundle:

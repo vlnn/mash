@@ -32,6 +32,21 @@ def test_prompt_loop_goes_through_the_external_trigger():
     assert plist["connections"][make_plist.TRIGGER] == [make_plist.link(make_plist.PROMPT)]
 
 
+def test_keyword_needs_a_space_unless_asked_otherwise():
+    keyword = lambda p: next(o for o in p["objects"] if o["config"].get("keyword") == "m")  # noqa: E731
+    assert keyword(make_plist.plist("0"))["config"]["withspace"] is True
+    assert keyword(make_plist.plist("0", with_space=False))["config"]["withspace"] is False
+
+
+def test_hotkey_opens_the_filter_with_an_empty_query():
+    plist = make_plist.plist("0")
+    hotkey = next(o for o in plist["objects"] if o["type"] == "alfred.workflow.trigger.hotkey")
+    assert hotkey["config"]["argument"] == 2 and hotkey["config"]["argumenttext"] == "", (
+        "the hotkey passes empty text, so mash opens on its browse list"
+    )
+    assert plist["connections"][hotkey["uid"]] == [make_plist.link(make_plist.FILTER)]
+
+
 def test_user_configuration_covers_every_setting():
     names = {v["variable"] for v in make_plist.plist("0.0.0")["userconfigurationconfig"]}
     assert names == {"python", "folder", "editor", "flows", "max_results", "show_nodes"}
