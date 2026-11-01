@@ -8,21 +8,24 @@ mash is a fuzzy-searchable tree of small text files, where a file is either a **
 
 ## 1. The tree: folders are structure
 
-**For:** keeping and finding things without proper names — the way your brain sometimes knows the thing but forgets what it's called. `work/k8s/` is a place; you can walk into it and look, and a record inside it doesn't need "work" or "k8s" in its words.
+**For:** keeping and finding things without proper names — the way your brain sometimes knows the thing but forgets what it's called. `work/cli/` is a place; you can walk into it and look around, and a record inside it doesn't need "work" or "cli" in its words. What the thing *is about* goes in the words or a tag, where search can reach it; where it *belongs* is the folder.
 
 ```
 ~/.mash/
 ├── work/
-│   └── k8s/
-│       └── ctx-staging.ab9d2c.txt
-└── body/
-    └── weight-kg-body.x81pq2.txt
+│   └── cli/
+│       ├── deploy-staging.ab9d2c.txt      deploy staging #k8s -> ./deploy.sh staging
+│       └── tail-api-logs.7xw1ue.txt       tail api logs -> tail -f api.log | grep ERROR
+└── home/
+    └── recipes/
+        └── pancakes.x81pq2.txt            pancakes -> 2 eggs, 200 ml milk, 150 g flour
 ```
 
 ```
-m work/ ctx          only under work/
-m work/ k8s/ ctx     the same, terms compose into a path
-m                    the root's folders first, then everything
+m work/ deploy         only under work/
+m work/ cli/ deploy    the same, terms compose into a path
+m #k8s                 by tag, wherever it lives
+m                      the root's folders first, then everything
 ```
 
 A node exists when its folder does. Naming a node in a query narrows the search to that subtree and never looks at siblings or ancestors. An empty query lists the current node's folders before its records, so the tree is browsable top-down without typing a name.
