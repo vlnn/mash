@@ -73,11 +73,14 @@ def main(argv=None):
     return best(argv)
 
 
+def find(current, argv):
+    query = queries.parse(" ".join(argv))
+    return search.search(current.tree.load(), query, current.journal.touched())
+
+
 def best(argv):
     current = session()
-    hits = search.search(
-        current.tree.load(), queries.parse(" ".join(argv)), current.journal.touched()
-    )
+    hits = find(current, argv)
     if not hits:
         return 1
     chain = current.resolve_chain(hits[0].stored)
@@ -93,9 +96,7 @@ def best(argv):
 @command("-l")
 def listing(argv):
     current = session()
-    hits = search.search(
-        current.tree.load(), queries.parse(" ".join(argv)), current.journal.touched()
-    )
+    hits = find(current, argv)
     for hit in hits:
         record = hit.stored.record
         first = (f"{record.arrow} {record.query}" if record.is_rule else record.body).split("\n")[0]
@@ -126,9 +127,7 @@ def forget(argv):
         return forget_node(current, argv[1].rstrip("/"))
     history_only = argv[:1] == ["--journal"]
     words = argv[1:] if history_only else argv
-    hits = search.search(
-        current.tree.load(), queries.parse(" ".join(words)), current.journal.touched()
-    )
+    hits = find(current, words)
     if not hits:
         print("nothing matches", file=sys.stderr)
         return 1
@@ -185,9 +184,7 @@ def alfred_prompt(argv):
 @command("--resolve")
 def resolve_command(argv):
     current = session()
-    hits = search.search(
-        current.tree.load(), queries.parse(" ".join(argv)), current.journal.touched()
-    )
+    hits = find(current, argv)
     if not hits:
         return 1
     chain = resolve.resolve(current.tree.load(), hits[0].stored, current.journal.touched())

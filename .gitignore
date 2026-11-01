@@ -4,3 +4,8 @@ __pycache__/
 dist/
 .pytest_cache/
 .ruff_cache/
+dist/
+info.plist
+icon.png
+node.png
+add.png

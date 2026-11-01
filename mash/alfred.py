@@ -41,7 +41,7 @@ class Session:
             if hits and usable(text):
                 rows.append(run_row(text))
             rows.append(self.add_row(query, text))
-        return {"items": rows}
+        return {"items": rows, "variables": {"prompt": "0"}}
 
     def node_rows(self, query, text):
         if (
@@ -67,6 +67,7 @@ class Session:
             "title": record.head,
             "subtitle": self.subtitle(record),
             "arg": dumps(command),
+            "variables": {"prompt": "1" if command["do"] == "prompt" else "0"},
             "mods": {
                 "shift": {"arg": dumps(dict(command, mode="paste")), "subtitle": "Paste"},
                 "cmd": {"arg": dumps(act(path, "edit")), "subtitle": f"Edit {path}"},

@@ -1,4 +1,5 @@
 PYTHON ?= /usr/bin/python3
+VERSION ?= 0.1.0
 
 test:
 	uv run pytest -q
@@ -15,4 +16,10 @@ fmt:
 bench:
 	uv run python bench.py --python $(PYTHON)
 
-.PHONY: test test-system lint fmt bench
+build:
+	uv run python scripts/build.py $(VERSION)
+
+check: build
+	uv run python scripts/smoke.py
+
+.PHONY: test test-system lint fmt bench build check
