@@ -224,8 +224,8 @@ Scores add up over the query words, so a record found through its head always ou
 | `m prod` | ssh prod web · k8s ctx prod kube | whole word |
 | `m web ssh` | ssh prod web · ssh staging web | any order |
 | `m stg` | ssh staging web · k8s ctx staging kube | letters in order inside *staging* |
-| `m k8 prd` | k8s ctx prod kube | `k8` starts *k8s*, `prd` is inside *prod* |
-| `m grf lat` | grafana latency | `grf` inside *grafana*, `lat` starts *latency* |
+| `m k8 prd` | k8s ctx prod kube | `k8` starts *k8s*, `prd` is letters in order inside *prod* |
+| `m grf lat` | grafana latency | `grf` is letters in order inside *grafana*, `lat` starts *latency* |
 | `m кав` | кава coffee | Unicode |
 | `m deploy` | ssh prod web | no head has it; the body does |
 | `m dply` | ssh prod web | letters in order inside the body word *deploy@10.0.1.5* |
