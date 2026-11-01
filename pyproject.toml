@@ -1,0 +1,19 @@
+[project]
+name = "mash"
+version = "0.1.0"
+description = "Fuzzy search over a tree of plain-text records, from fish and from Alfred"
+requires-python = ">=3.9"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8", "pytest-mock>=3", "ruff>=0.5"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
