@@ -8,7 +8,7 @@ mash is a fuzzy-searchable tree of small text files, where a file is either a **
 
 ## 1. The tree: folders are structure
 
-**For:** keeping things apart without naming everything. `work/k8s/` is a place; a record inside it doesn't need "work" or "k8s" in its words.
+**For:** keeping and finding things without proper names — the way your brain sometimes knows the thing but forgets what it's called. `work/k8s/` is a place; you can walk into it and look, and a record inside it doesn't need "work" or "k8s" in its words.
 
 ```
 ~/.mash/
