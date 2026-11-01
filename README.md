@@ -216,7 +216,9 @@ Each query word matches a head word in one of four ways, strongest first, then f
 | `prd`, `stg` | prod, staging | letters in order inside one head word | 2 |
 | `dply`, `use-context` | `ssh deploy@…`, `kubectl config use-context` | letters in order inside one body word | 1 |
 
-Scores add up over the query words, so a record found through its head always outranks one found only through its body. Letters-in-order never crosses a word boundary: `kctx` does not find `k8s ctx`, `k ctx` does. Swapped letters do not match (`stgaing`), dropped letters do (`stgng`).
+Scores add up over the query words, so a record found through its head always outranks one found only through its body. Letters-in-order never crosses a word boundary: `kctx` does not find `k8s ctx`, `k ctx` does. Swapped letters do not match (`stgaing`), dropped letters do (`stgng`). Body words are split on punctuation as well as spaces, so a URL is many short words and `prod` does not fuzzy-match `https://grafana.example.com/d/x` through its scattered letters.
+
+A plain word matches a tag by the tag rule below (prefix only): `read` finds `#reading`, `reading` does not find `#read`.
 
 | you type | you get | why |
 |---|---|---|
@@ -230,6 +232,7 @@ Scores add up over the query words, so a record found through its head always ou
 | `m deploy` | ssh prod web | no head has it; the body does |
 | `m dply` | ssh prod web | letters in order inside the body word *deploy@10.0.1.5* |
 | `m ssh prod staging` | only *Add* | every term must match |
+| `m delany @kobold` | delany books | a hand-off typed in full searches by its text; the `@word` is not a search term |
 
 Ties go to the record with fewer head words, then to the more recently touched one.
 
@@ -411,9 +414,19 @@ mash add 'ssh prod web -> ssh deploy@10.0.1.5'
 mash add 'work/ k8 ctx -> kubectl config use-context staging'
 mash fill 'ssh {{user=root}}@{{host}}' user=deploy host=10.0.0.1
 mash forget prod web
+mash --resolve weight             prints the chain a rule follows
 mash --alfred stg                 Script Filter JSON, what the workflow calls
-mash --bench                      latency per query against the current folder
+mash --act JSON                   performs a row's command (what ↩ runs)
 ```
+
+Install the fish side by linking the two functions from the checkout:
+
+```
+ln -s (pwd)/fish/mash.fish ~/.config/fish/functions/
+ln -s (pwd)/fish/stash.fish ~/.config/fish/functions/
+```
+
+`mash.fish` finds `run.py` next to itself, so a checkout anywhere works; the Alfred workflow carries its own copy of the code.
 
 Because the output is plain text, it pipes:
 
@@ -442,7 +455,7 @@ Exit status is 0 on a hit, 1 on none, so `mash prod; or echo no` works.
 
 Requirements: Alfred 5 with the Powerpack, Python 3.9+ (`/usr/bin/python3` after `xcode-select --install`). No packages.
 
-1. Import `mash.alfredworkflow`.
+1. `make build` produces `dist/mash.alfredworkflow`; double-click it and press **Import**.
 2. Configure: **Python** (absolute path), **Folder** (`~/.mash`), **Editor**, **Flows**.
 3. For `@keyword` hand-offs run once in Terminal and click OK:
    `osascript -e 'tell application id "com.runningwithcrayons.Alfred" to search "m"'`
@@ -460,17 +473,19 @@ Keyword `m`; hyper+M opens it too. Alfred runs the script on every keystroke and
 
 ## Performance
 
-Every keystroke is a fresh process: start Python, walk the folder, open every record, parse, match, print. Targets, median per keystroke on an Apple Silicon Mac with the system interpreter:
+Every keystroke is a fresh process: start Python, walk the folder, match, print. Targets and measurements, median per keystroke (`make bench`; the measurements are from a Linux VM with the system interpreter, an Apple Silicon Mac is usually faster):
 
-| records | per keystroke |
-|---|---|
-| 1,000 | < 40 ms |
-| 5,000 | < 80 ms |
-| 20,000 | < 200 ms |
+| records | target | measured | of which walking the folder |
+|---|---|---|---|
+| 1,000 | < 40 ms | 38 ms | 9 ms |
+| 5,000 | < 80 ms | 71 ms | 44 ms |
+| 20,000 | < 200 ms | 190 ms | 170 ms |
 
-One file per record means one `open()` per record per keystroke, and that is the cost to watch. So the bench is built before the matcher: `bench.py` generates a tree of 1k, 5k and 20k single-record files and times a keystroke; `--stress` uses a vocabulary where most queries match most records. If a keystroke misses the targets, an index keyed by file mtimes (SQLite) comes in, with the files staying the source of truth. If that is still not enough, the matcher moves to Go or Rust behind the same CLI. The numbers decide, not feel.
+One file per record means one `stat()` per record per keystroke, and without an index also one `open()` and a parse. The first version had no index and measured 41 / 120 / 435 ms, so the **index** came in: `~/.mash/.index` holds every parsed record keyed by path and mtime (a pickle, because the records have to become Python objects anyway and `pickle.load` does that in C). Each keystroke still walks the folder and `stat`s every file, parses only files that are new or changed, drops files that are gone, and rewrites the index only when something changed. The files remain the source of truth; delete `.index` any time.
 
-What keeps it fast meanwhile: one compiled regex per query word whose alternatives are ordered strongest-first so a single match gives both whether and how well; body fuzzy only over a lowercased copy made at parse time; `stat` for open-or-copy only on shown rows; `python -S`, no `dataclasses`, no `pathlib`.
+What else keeps it fast: one compiled regex per query word, tried weakest-first over the whole lowercased head so a miss costs one search; body fuzzy over a lowercased, punctuation-split copy made at parse time; the fixed cost kept to about 27 ms (interpreter 8, `re` 8, `json` 2, the rest) by importing `subprocess` and friends only when ↩ needs them; `python -S`, `NamedTuple`, no `dataclasses`, no `pathlib`.
+
+The walk is now most of the keystroke at 20k. If that ever matters, the next steps are skipping `stat` for folders whose own mtime is unchanged (misses in-place edits, so it needs a cheap safety net) or moving the walk and the matcher to Go or Rust behind the same CLI. `bench.py --stress` uses a vocabulary where most queries match most records; `--sizes 1000,5000,20000` and `--python /path` pick the tree sizes and the interpreter.
 
 ## Limitations
 
@@ -490,26 +505,32 @@ uv sync
 make test           pytest on the project interpreter
 make test-system    the same on /usr/bin/python3
 make lint           ruff check + format
-make check          build mash.alfredworkflow and drive it the way Alfred would
+make build          dist/mash.alfredworkflow
+make check          build, then drive the bundle's scripts the way Alfred would
 make bench
 ```
+
+The Alfred plumbing (the prompt loop through an external trigger, the conditional on the `prompt` variable, mods) is generated and structurally tested but has not yet been clicked through in Alfred itself; that is the first thing to do on a Mac.
 
 | path | responsibility |
 |---|---|
 | `mash/records.py` | record grammar: first line → head, arrow, body; `;;` from the box; file name from head ↔ `Record` |
 | `mash/query.py` | box grammar: terms, `#tags`, `node/`, leading arrow ↔ `Query` |
-| `mash/tree.py` | the folder: walk nodes, read records, write and rename files, delete; atomic, symlink-safe |
+| `mash/tree.py` | the folder: walk nodes, read records, the mtime-keyed index, write and delete files; atomic writes |
 | `mash/match.py` | one regex per word, the four head tiers and the body tier, scoring |
 | `mash/axes.py` | relevance, time, structure as `records → records`; composition from an arrow |
 | `mash/resolve.py` | rules: context, best hit, recursion, depth cap, chain |
 | `mash/journal.py` | touches, last-touch lookup, compaction |
 | `mash/fill.py` | placeholders and their defaults |
 | `mash/actions.py` | what ↩ does for a body: open, hand off, prompt, copy |
-| `mash/alfred.py` | Script Filter JSON: rows, node rows, *Add*, *Run*, prompts |
-| `mash/cli.py` | `mash`, `-l`, `add`, `fill`, `forget`, `--alfred`, `--bench` |
-| `make_plist.py` | source of `info.plist` |
+| `mash/alfred.py` | `Session`: Script Filter rows, node rows, *Add*, *Run*, prompt rows, and `act` for what ↩ does |
+| `mash/cli.py` | `mash`, `-l`, `add`, `fill`, `forget`, `--resolve`, `--alfred`, `--act`, `--prompt` |
+| `run.py` | entry point for Alfred and the fish function |
+| `make_plist.py` | source of `info.plist`: keyword filter → conditional → act or the prompt loop → notification |
+| `scripts/build.py`, `scripts/smoke.py`, `scripts/make_icons.py` | build `dist/mash.alfredworkflow`; drive it the way Alfred would; draw the icons |
+| `fish/` | the `mash` and `stash` functions |
 | `bench.py` | per-keystroke latency, `--stress` |
-| `tests/` | pytest, `pytest-mock` for clock, clipboard and filesystem edges |
+| `tests/` | pytest, `pytest-mock` for clock, clipboard and subprocess edges |
 
 Order of work: `bench.py` and the tree generator first (so every later step has a number), then `records.py`, `query.py`, `match.py`, `axes.py`, `tree.py`, `resolve.py`, `journal.py`, `actions.py`, `cli.py`, `alfred.py`.
 
