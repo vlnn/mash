@@ -1,0 +1,1 @@
+forget safety check -> a head edited while forget waits for y is reported and the file kept; a changed body is not noticed, and opt-enter checks nothing

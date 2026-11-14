@@ -1,0 +1,1 @@
+slash word lost when adding into a folder -> every other term ending in a slash is dropped, the body's too; add without the folder and move the file

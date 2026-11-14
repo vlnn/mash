@@ -1,6 +1,6 @@
 # alfred-mash
 
-Fuzzy search over a tree of plain-text records you own, from fish and from Alfred. The repository is `alfred-mash`; the thing itself is just **mash**: the Alfred keyword is `m`, the fish command is `mash`, the records live in `~/.mash`.
+Fuzzy search over a tree of plain-text records you own, from fish and from Alfred. The repository is [`vlnn/mash`](https://github.com/vlnn/mash); the workflow bundle and the Python project are named `alfred-mash`; the thing itself is just **mash**: the Alfred keyword is `m`, the fish command is `mash`, the records live in `~/.mash`.
 
 Type a few letters, get the thing. Type something it does not have, press ↩, now it has it. A record is a text file; a folder of records is a node; the folder tree is your structure. Some records are *rules*: instead of holding a value they hold a search, and resolving them runs that search — and the searches it finds, and so on — until a value comes out.
 
@@ -280,7 +280,7 @@ Results come out of three independent orderings, called axes:
 - **time** — when the record was last touched (see [The journal](#the-journal))
 - **structure** — where in the tree the record lives
 
-By default: relevance first, newest-touched breaks ties, whole tree. You change that with an **arrow** at the start of the query. Each character before the `>` names an axis and its direction; characters compose left to right.
+By default: relevance first, then the shorter head, then the most recently touched; whole tree. You change that with an **arrow** at the start of the query. Each character before the `>` names an axis and its direction; characters compose left to right.
 
 | arrow | meaning |
 |---|---|
@@ -295,11 +295,12 @@ By default: relevance first, newest-touched breaks ties, whole tree. You change 
 m ~> weight kg          the weight record that has gone longest without a touch, first
 m ~>                    the whole tree, least recently touched first
 m work/ /> ctx          inside work/, only its subtree (which node/ already implies — see below)
+m work/ ~> ctx          a node term goes before the arrow; after a leading arrow it is a plain word, so  m ~> work/ ctx  finds nothing
 ```
 
 Time is the last touch, not the day a record was written (see [The journal](#the-journal)), and it only breaks ties: `~>` never lifts a weaker match over a stronger one, or a longer head over a shorter one.
 
-The same arrow in a rule's head is the rule's search spec, so `weight ~> weight kg` and typing `~> weight kg` run the identical search. `=` carries no axis, so `=~>` is just `~>`.
+The same arrow in a rule's head is the rule's search spec, so `weight ~> weight kg` and typing `~> weight kg` order their hits the same way; the rule looks in its own subtree first and never at itself. `=` carries no axis, so `=~>` is just `~>`.
 
 New axes get a new character; an arrow is a tiny composable language and that is on purpose.
 
@@ -395,7 +396,7 @@ Whatever ↩ does, the value is also *shown*: Alfred posts it as a notification,
 |---|---|
 | ⇧↩ | copy and paste into the frontmost app |
 | ⌘↩ | open the record's file in your editor |
-| ⌥↩ | delete the record (and its journal lines) |
+| ⌥↩ | delete the record (and its journal lines); switched off on `help/` rows |
 | ⌃ (hold) | the record's file and what ↩ will do; for a rule, its arrow and query |
 | ⌘C | copy the body as written, placeholders unfilled |
 | ⌘L | large type |
@@ -438,7 +439,7 @@ mash forget --node work/k8s/    removes a node: its folder, and every journal li
 mash forget --journal prod web  keeps the record, drops its history (it becomes "untouched")
 ```
 
-`forget` prints what it is about to remove and waits for `y`. Before deleting, the file's head is compared with what the search saw, so a file edited since is reported, not clobbered.
+`forget` prints what it is about to remove and waits for `y`. Before deleting, the file's head is compared with what the search saw, so a record whose head was edited while it waited is reported and kept; a changed body is not noticed. ⌥↩ has no such check: it deletes the file as it is at that moment. Neither removes a `help/` record.
 
 ## Command line
 
@@ -450,7 +451,7 @@ mash weight                       resolves the rule, prints 80
 mash -l stg                       lists every hit, one per line: score, node, head, first body line
 mash -l                           lists everything, most recent first
 mash help/ tilde                  searches the built-in manual; help/ works in every command
-mash -l '~> weight kg'            oldest first (quote arrows and {{…}} for the shell)
+mash -l '~> weight kg'            least recently touched first (quote arrows and {{…}} for the shell)
 mash add 'ssh prod web -> ssh deploy@10.0.1.5'
 mash add 'work/ k8 ctx -> kubectl config use-context staging'
 mash fill 'ssh {{user=root}}@{{host}}' user=deploy host=10.0.0.1
@@ -538,9 +539,12 @@ The walk is now most of the keystroke at 20k. If that ever matters, the next ste
 - Head words split on spaces and commas only; `kube:` is a word.
 - The head is the first line of the file; a body cannot come before it.
 - `{{name=…}}` defaults cannot contain braces.
-- A path body opens only if it exists at search time.
+- A path body opens only if it exists when ↩ is pressed; otherwise it is copied.
 - A head cannot end in `/` and still be searched as words; `foo/` means the node.
 - Rules resolve to one hit; there is no "all hits" resolution.
+- A `~>` rule is a queue only over a folder (`next ~> chores/`). With a word or a tag in its query, score and then the shorter head come before time, so the same record keeps coming back unless the heads are equally long.
+- In the box a node term goes before the arrow (`m work/ ~> ctx`); after a leading arrow it is read as a word. A rule's query may name a node.
+- Adding into a node drops every other term ending in `/`, the body's included: `work/ docs -> open docs/` stores `docs -> open`, from Alfred and from `mash add` alike. Add without the node and move the file.
 - A rule cannot prompt: blanks in the fact it reaches take their defaults, and a blank without one stops the ↩.
 - The time axis is last use, not creation: reading a record through `~>` makes it the newest.
 - Any term ending in `/` before the arrow names a node, wherever it stands: `m https://example.com/` offers to add to a node called `https://example.com`. Drop the trailing slash, or put the URL after `->`.

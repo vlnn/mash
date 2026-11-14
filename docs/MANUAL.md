@@ -311,6 +311,7 @@ There is no add command. Whatever you type after `m` is offered as a new record 
 - With matches, *Add* is last.
 - As soon as you type an arrow you are clearly writing a record, so *Add* becomes the **first** row. The head words are still searched, so you see at once whether such a record exists.
 - A term ending in `/` says where: the row reads `Add to work/k8s/: …`, and `(new node)` when the folder does not exist yet.
+- When you add into a folder, every other term ending in `/` is dropped, the body's included: `m work/ docs dir -> open docs/ now` stores `docs dir -> open now`. The row's title shows what will be stored. For such a body, add without the folder and move the file, or fix the file with ⌘↩.
 
 | You type | The *Add* row | ↩ writes |
 | --- | --- | --- |
@@ -330,7 +331,7 @@ The Alfred box is one line, so `;;` stands for a newline there: `m release notes
 
 ⌘↩ opens the record's file in your editor. The file is the record: change the head, the arrow or the body and save. To move a record, move the file; to rename a folder, rename it.
 
-⌥↩ deletes the file and the record's journal lines. There is no undo, which is one more reason to `git init` the tree. In fish, `mash forget` does the same after asking (see [In the terminal](#in-the-terminal)).
+⌥↩ deletes the file as it is at that moment, and the record's journal lines. There is no undo, which is one more reason to `git init` the tree. In fish, `mash forget` does the same after asking (see [In the terminal](#in-the-terminal)).
 
 ### Folders
 
@@ -401,6 +402,8 @@ m next chore ↩                    next chore → water plants
 
 Pressing it touches the chore it returned, which sends that chore to the back. Nothing is marked done and nothing is deleted.
 
+A queue goes round only over a folder. With a word or a tag in the rule's query the usual order applies, score first and then the shorter head, and time is left to decide between heads of equal length: `next paper ~> paper` would hand out *paper sizes* on every ↩, because its head is the shortest.
+
 A rule cannot ask questions. If the record it reaches has blanks, those with a default take it, and one without a default stops the ↩ with *Fill in the blanks first*; press ↩ on that record itself to be asked. If the search finds nothing, the notification says `Could not resolve: nothing matches …`.
 
 ### Arrows on a query
@@ -414,6 +417,8 @@ The arrow that makes a rule also works at the start of what you type, with the s
 | `m ~>` | the whole tree, least recently touched first | what you have not looked at for longest |
 
 Each character before the `>` is one instruction: `~` reverses time, `/` keeps to the subtree, `#` keeps to the rule's own tags (it has a meaning only inside a rule), and `=` means nothing in particular, so `=>` is the plain search. They combine: `~/>` is least recently touched first, within the subtree.
+
+With a folder, the folder goes first: `m work/ ~> ctx` lists *k8s ctx staging kube* and then *k8s ctx prod kube*, the reverse of `m work/ ctx`. After a leading arrow a folder term is read as a plain word, so `m ~> work/ ctx` finds nothing. Inside a rule the query may name a folder, as `next chore ~> home/chores/` does.
 
 The arrow only breaks ties. It never lifts a weaker match over a stronger one: `m weight` lists the two rules before the two values whichever arrow you put in front, because their heads are shorter.
 
@@ -539,7 +544,7 @@ ssh root@db.example.com -p 22
 | `mash add 'HEAD -> BODY'` | stores a record; start with `node/` to choose the folder |
 | `mash fill BODY name=value …` | fills blanks in a body |
 | `mash --resolve WORDS` | prints the chain a rule would follow, without using anything |
-| `mash forget WORDS` | removes the best hit and its history, after showing it and waiting for `y` |
+| `mash forget WORDS` | removes the best hit and its history, after showing it and waiting for `y`; if the head was edited meanwhile it reports that and keeps the file (a changed body is not noticed) |
 | `mash forget --journal WORDS` | keeps the record and drops its history |
 | `mash forget --node work/k8s/` | removes a folder and everything under it, after `y` |
 
@@ -643,8 +648,11 @@ Leave `.index` out: it is a cache mash rebuilds, and since it is a pickle, loadi
 - Head words split on spaces and commas only, so `kube:` is one word.
 - Time is last use, not creation, and a rule that reads a record uses it.
 - A rule resolves to one record, and cannot prompt for blanks.
+- A `~>` queue goes round over a folder only; over a word or a tag the shorter head keeps coming first.
+- In the box a folder term goes before the arrow; after a leading arrow it is a plain word.
+- Adding into a folder drops any other term that ends in `/`, in the body too.
 - A term ending in `/` before the arrow always names a node, so a head or a plain line cannot contain one. `m https://example.com/` offers to add to a node called `https://example.com`; drop the trailing slash, or put the link after `->`.
-- A path opens only if it exists when you search.
+- A path opens only if it exists when you press ↩; otherwise it is copied.
 - A default inside `{{name=…}}` cannot contain braces.
 - Deleting removes the file; there is no undo.
 - `help/` is read-only and is searched only when you name it.

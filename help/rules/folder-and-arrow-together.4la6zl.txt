@@ -1,0 +1,1 @@
+folder and arrow together -> the folder goes first: "m work/ ~> ctx"; after a leading arrow a folder term is read as a plain word

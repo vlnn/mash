@@ -9,6 +9,7 @@ import pytest
 
 from mash import actions, alfred, cli, fill
 from mash.journal import Journal
+from mash.records import from_box
 from mash.session import Session, Settings
 from mash.tree import ID_LENGTH, Tree
 
@@ -43,6 +44,8 @@ SEARCHES = [
     ("work/ ctx", PROD_AND_STAGING_CTX),
     ("work/k8s/ ctx", PROD_AND_STAGING_CTX),
     ("work/ k8s/ ctx", PROD_AND_STAGING_CTX),
+    ("work/ ~> ctx", ["k8s ctx staging kube", "k8s ctx prod kube"]),
+    ("~> work/ ctx", []),
     ("home/chores/", ["descale kettle", "take out recycling", "water plants"]),
     ("wifi", ["wifi guest", "wifi office"]),
     ("#reading", READING),
@@ -103,6 +106,7 @@ OFFERS = [
     ("work/ k8s/ ctx dev", "work/k8s", False, "ctx dev"),
     ("garden/ tomatoes sown", "garden", True, "tomatoes sown"),
     ("home/ wifi cafe -> CafeNet", "home", False, "wifi cafe -> CafeNet"),
+    ("work/ docs dir -> open docs/ now", "work", False, "docs dir -> open now"),
 ]
 
 TYPED = [text for text, _ in itertools.chain(SEARCHES, FOLDERS, ARROWS, RULES)]
@@ -175,6 +179,14 @@ def test_a_queue_rule_hands_out_the_chores_in_turn(sample):
     served = [press(sample, "next chore").split(" → ")[-1] for _ in range(4)]
     assert served == ["water plants", "take out recycling", "descale kettle", "water plants"], (
         "each ↩ touches the chore it returns, so the next ↩ returns the one waiting longest"
+    )
+
+
+def test_a_queue_over_words_keeps_handing_out_the_shortest_head(sample):
+    sample.tree.add("", from_box("next paper ~> paper"))
+    served = {press(sample, "next paper").split(" → ")[1] for _ in range(3)}
+    assert served == {"paper sizes"}, (
+        "with a word in the query a shorter head always comes first, so the queue stands still"
     )
 
 

@@ -1,0 +1,1 @@
+keys on a help row -> enter copies as usual; opt-enter is switched off, because the manual is read-only

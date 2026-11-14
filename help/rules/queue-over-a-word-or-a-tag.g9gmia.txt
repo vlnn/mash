@@ -1,0 +1,1 @@
+queue over a word or a tag -> does not go round: score and then the shorter head come before time, so the same record keeps coming back; point the rule at a folder
