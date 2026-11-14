@@ -1,0 +1,1 @@
+k8s ctx staging kube -> kubectl config use-context staging

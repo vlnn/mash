@@ -1,0 +1,1 @@
+find py rm -> find . -name '*.pyc' -exec rm {} \;

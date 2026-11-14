@@ -59,7 +59,7 @@ def test_tag_prefix_rule(term, tag, expected):
         ("kctx", "k8s ctx -> x", 0),
         ("k ctx", "k8s ctx -> x", 14),
         ("", "anything -> x", 0),
-        ("prod", "pihole prod finished", 8),
+        ("prod", "backup prod finished", 8),
         ("prod", "grafana -> https://grafana.example.com/d/x", 0),
         ("grafana", "latency -> https://grafana.example.com/d/x", 1),
         ("gr ex", "latency -> https://grafana.example.com/d/x", 2),

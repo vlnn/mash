@@ -1,0 +1,1 @@
+logs api -> tail -f app.log | grep ERROR

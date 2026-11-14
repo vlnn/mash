@@ -20,7 +20,7 @@ from mash.records import from_box, parse, render, slug
             "tail -f app.log | grep ERROR",
         ),
         ("c pointer -> int *p = &x;  // x -> p", "c pointer", "->", "int *p = &x;  // x -> p"),
-        ("pihole update finished", "pihole update finished", "->", "pihole update finished"),
+        ("bins go out on thursday", "bins go out on thursday", "->", "bins go out on thursday"),
         ("ssh prod web   ->   ssh x", "ssh prod web", "->", "ssh x"),
         ("кава coffee -> order", "кава coffee", "->", "order"),
     ],
@@ -112,7 +112,7 @@ def test_from_box_expands_double_semicolon(line, body):
     [
         "ssh prod web -> ssh deploy@10.0.1.5",
         "weight ~> weight kg",
-        "pihole update finished",
+        "bins go out on thursday",
         "release notes -> ## {{version}};;- {{done}}",
     ],
 )
@@ -127,7 +127,7 @@ def test_render_round_trips_through_parse(line):
         ("ssh prod web -> ssh deploy@10.0.1.5", "ssh prod web -> ssh deploy@10.0.1.5\n"),
         ("standup -> {{date}};;done: {{done}}", "standup -> {{date}}\ndone: {{done}}\n"),
         ("weight ~> weight kg", "weight ~> weight kg\n"),
-        ("pihole update finished", "pihole update finished\n"),
+        ("bins go out on thursday", "bins go out on thursday\n"),
     ],
 )
 def test_render_file_text(line, text):

@@ -1,0 +1,3 @@
+standup -> {{date}} standup
+done: {{done}}
+next: {{next}}

@@ -15,7 +15,7 @@ m stg k8
   ↩ copy / open / resolve / add   ⇧↩ paste   ⌘↩ edit   ⌥↩ delete
 ```
 
-See also `DESIGN.md`: what each feature is for, one example each, and how they combine.
+See also [docs/MANUAL.md](docs/MANUAL.md): a task-by-task walkthrough on the sample tree in `examples/`, every example in it checked by the test suite. And `DESIGN.md`: what each feature is for, one example each, and how they combine.
 
 ## Contents
 
@@ -50,8 +50,8 @@ m ssh prod web -> ssh deploy@10.0.1.5      ↩ adds a fact to the root node
 m prod                                     ↩ shows and copies ssh deploy@10.0.1.5
 m https://grafana.example.com/d/latency    ↩ adds it; later  m graf  ↩ opens it
 m weight kg -> 80                          ↩ a fact
-m weight ~> weight kg                      ↩ a rule: resolving it finds the most recent "weight kg" record
-m weight                                   ↩ shows and copies 80
+m weight now => weight kg                  ↩ a rule: resolving it finds the most recently touched "weight kg" record
+m weight now                               ↩ shows and copies 80
 m work/ k8s ctx staging -> kubectl config use-context staging
                                            ↩ adds under the node work/, creating it
 m work/                                    work/'s folders, then everything in work/
@@ -109,7 +109,9 @@ notes folder -> ~/notes
 email work -> name.surname@example.com
 find py rm -> find . -name '*.pyc' -exec rm {} \;
 logs api -> tail -f app.log | grep ERROR
-pihole update finished
+paper sizes -> A4 210 x 297 mm, Letter 8.5 x 11 in
+ports -> 22 ssh, 53 dns, 80 http, 443 https
+bins go out on thursday
 ```
 
 Only the first arrow on a line counts, so `->` inside the body is just text:
@@ -118,23 +120,25 @@ Only the first arrow on a line counts, so `->` inside the body is just text:
 c pointer -> int *p = &x;  // x -> p
 ```
 
-A line without an arrow is a fact whose body is its own words: `pihole update finished` is searched by those words and copies them.
+A line without an arrow is a fact whose body is its own words: `bins go out on thursday` is searched by those words and copies them.
 
 ### Rules
 
 Any arrow other than `->` means *search*: the right-hand side is a query, not a value. Resolving the rule runs the query and takes the best hit.
 
 ```
+weight now => weight kg
 weight ~> weight kg
 k8 => kubernetes kube
 reading now => #reading
 ```
 
-- `weight` resolves to the most recently touched record matching `weight kg`, which today is probably `weight kg #body -> 80` and tomorrow is whatever you added last.
+- `weight now` resolves to the most recently touched record matching `weight kg`, which today is probably `weight kg #body -> 80` and tomorrow is whatever you added last.
+- `weight` runs the same search the other way round: it resolves to the `weight kg` record that has gone longest without a touch.
 - `k8` is a synonym: searching `k8` shows the rule; ↩ resolves it to the best `kubernetes kube` hit. Synonyms are just rules.
 - `reading now` is a saved view: ↩ resolves to the best-matching record tagged `#reading`. Views are just rules.
 
-The characters before the `>` are the rule's **axes** — see [Axes and arrows](#axes-and-arrows). `=>` is the default search; `~>` is the same search oldest-first.
+The characters before the `>` are the rule's **axes** — see [Axes and arrows](#axes-and-arrows). `=>` is the default search; `~>` is the same search with the time order reversed, least recently touched first.
 
 A rule has no body of its own. If the hit it resolves to is itself a rule, that one is resolved too, until a fact comes out. See [Resolving rules](#resolving-rules).
 
@@ -262,17 +266,19 @@ By default: relevance first, newest-touched breaks ties, whole tree. You change 
 | arrow | meaning |
 |---|---|
 | `=>` | defaults — never needed, implied |
-| `~>` | time reversed: oldest-touched first |
+| `~>` | time reversed: least recently touched first |
 | `/>` | structure: only the current node's subtree |
 | `#>` | only records sharing one of the rule's own tags (meaningful inside a rule) |
-| `~/>` | oldest first, within the subtree |
+| `~/>` | least recently touched first, within the subtree |
 | `/#>` | subtree, same tags |
 
 ```
-m ~> weight kg          oldest weight record first — the day you started
-m ~>                    the whole tree, oldest first
+m ~> weight kg          the weight record that has gone longest without a touch, first
+m ~>                    the whole tree, least recently touched first
 m work/ /> ctx          inside work/, only its subtree (which node/ already implies — see below)
 ```
+
+Time is the last touch, not the day a record was written (see [The journal](#the-journal)), and it only breaks ties: `~>` never lifts a weaker match over a stronger one, or a longer head over a shorter one.
 
 The same arrow in a rule's head is the rule's search spec, so `weight ~> weight kg` and typing `~> weight kg` run the identical search. `=` carries no axis, so `=~>` is just `~>`.
 
@@ -306,9 +312,9 @@ On ↩:
 1. The rule's query runs with the rule's arrow as spec. Its **context** is the rule's own node subtree; if that yields nothing, the whole tree. `/>` in the arrow pins it to the subtree; a `node/` term in the query names any other node.
 2. The best hit is taken.
 3. If that hit is a rule, go to 1 with it. Depth is capped (8); a loop stops there and says so.
-4. The fact that comes out is acted on as if you had pressed ↩ on it: opened, copied, prompted for blanks.
+4. The fact that comes out is opened, handed off or copied, as if you had pressed ↩ on it. Its `{{name=value}}` blanks take their defaults. A rule cannot prompt: if the fact has a blank without a default, ↩ answers *Fill in the blanks first* and nothing is copied; press ↩ on the fact itself to be asked.
 
-The chain is shown as a notification and as the subtitle while ⌃ is held:
+The chain is shown as the notification (`mash --resolve weight` prints its heads without acting):
 
 ```
 weight → weight kg #body → 80
@@ -319,12 +325,14 @@ Examples:
 ```
 weight kg #body -> 80            added last week
 weight kg #body -> 79            added today
-weight ~> weight kg              resolves to 80: oldest first
-weight now => weight kg          resolves to 79: newest first
+weight ~> weight kg              resolves to 80: least recently touched first
+weight now => weight kg          resolves to 79: most recently touched first
 k8 => kubernetes kube
 kubernetes kube ctx staging -> kubectl config use-context staging
 m k8 ↩                           copies kubectl config use-context staging
 ```
+
+That holds until you press one of them: resolving `weight` touches the 80, which makes it the most recently touched weight, so `weight now` returns 80 as well until something else is touched (see [The journal](#the-journal)).
 
 A rule's query is parsed by the same grammar as the input box, so it can use tags, node names and arrows: `latest paper => #reading #ml`, `prod box => infra/ ssh prod`.
 
@@ -347,7 +355,7 @@ There is no add mode and no add command in the box. Whatever you type is always 
 | `work/ k8 ctx -> kubectl …` | `work/k8-ctx.<id>.txt` | `k8 ctx -> kubectl …` | k8 ctx |
 | `ssh prod web -> …` again | `ssh-prod-web.<other id>.txt` | | ssh prod web (both show) |
 
-A query that is itself usable — a URL, an existing path, `@kw`, or text with `{{…}}` — also gets a **Run: …** row that acts on the text without storing it.
+A query that is itself usable — `@kw` at either end, a URL, an existing path, or text with `{{…}}` — *and* that found something also gets a **Run: …** row between the hits and *Add*; it acts on the text without storing it. In practice that is the hand-off: the `@word` is not a search term, so `delany @kobold` finds *delany books* and offers *Run*, while a typed URL seldom matches a record and gets only *Add*.
 
 ## What ↩ does
 
@@ -357,7 +365,7 @@ A query that is itself usable — a URL, an existing path, `@kw`, or text with `
 | a path that exists (`~/notes`, `/Users/me/doc.pdf`) | opens it |
 | `text @keyword` or `@keyword text` | opens Alfred with `keyword text` — another workflow takes over |
 | anything with `{{name}}` | asks for each blank, then one of the above with the result |
-| a rule | resolves it, then one of the above with the fact it reaches |
+| a rule | resolves it, then opens, hands off or copies the fact it reaches (blanks take their defaults, see [Resolving rules](#resolving-rules)) |
 | anything else | copies it, newlines intact |
 
 Whatever ↩ does, the value is also *shown*: Alfred posts it as a notification, fish prints it.
@@ -365,11 +373,13 @@ Whatever ↩ does, the value is also *shown*: Alfred posts it as a notification,
 | keys | action |
 |---|---|
 | ⇧↩ | copy and paste into the frontmost app |
-| ⌘↩ | open the record's file in your editor (on *Add*: the node's folder) |
+| ⌘↩ | open the record's file in your editor |
 | ⌥↩ | delete the record (and its journal lines) |
-| ⌃ (hold) | file, line, and what ↩ will do; for a rule, the resolution chain |
+| ⌃ (hold) | the record's file and what ↩ will do; for a rule, its arrow and query |
 | ⌘C | copy the body as written, placeholders unfilled |
 | ⌘L | large type |
+
+These keys are for record rows. The *Add* and node rows take ↩ only; on *Run*, ⇧↩ pastes.
 
 A shell one-liner is never run on ↩; ⇧↩ into a terminal you are looking at is one keystroke more and much harder to regret.
 
@@ -377,13 +387,15 @@ Only a leading or trailing `@word` is a hand-off, so `me@example.com` copies as 
 
 ## The journal
 
-`~/.mash/.journal.log` is an append-only file with one line per **touch**: every ↩, ⇧↩, add, and resolution step, as `seconds ␉ identity ␉ node ␉ action`. The identity is the record's id, or its place for a hand-made file; the node is there for `forget --node` and for reading.
+`~/.mash/.journal.log` is an append-only file with one line per **touch**: every ↩, ⇧↩, add, `mash WORDS` in fish, and every step of a resolution, as `seconds ␉ identity ␉ node ␉ action`. The identity is the record's id, or its place for a hand-made file; the node is there for `forget --node` and for reading, `.` being the root. The action is the key, not its effect: `copy` for ↩ whatever ↩ then did, `paste` for ⇧↩, `print` from the CLI, `add`.
 
 ```
 1793528884.768	7xw1ue	work/k8s	copy
-1793528884.887	p0q2mz	body	resolve
-1793528884.887	x81pq2	body	copy
+1793528884.887	p0q2mz	body	copy
+1793528884.889	x81pq2	body	copy
 ```
+
+The last two lines are one ↩ on a rule: the rule, then the fact it reached. Listing, `mash -l` and `mash --resolve` never touch.
 
 Resolving a rule touches every step, including the fact it lands on. So after `weight ~> weight kg` has returned the oldest weight, that record is the most recently touched one, and `weight now => weight kg` returns it too until something else is touched. Reading through a rule is a use, and the time axis is about use; if you want the time axis to mean "created", that is the parked journal-as-body idea below.
 
@@ -424,7 +436,10 @@ mash forget prod web
 mash --resolve weight             prints the chain a rule follows
 mash --alfred stg                 Script Filter JSON, what the workflow calls
 mash --act JSON                   performs a row's command (what ↩ runs)
+mash --prompt JSON TYPED          the rows that ask for a blank
 ```
+
+The CLI finds the tree through `MASH_FOLDER`, `~/.mash` when unset. `mash` with no words is `mash -l`. `mash WORDS` prints and neither copies nor opens: `{{date}}` and `{{time}}` are filled, other blanks are printed as written, and `mash fill` is how you fill them.
 
 Install the fish side by linking the two functions from the checkout:
 
@@ -467,7 +482,7 @@ Requirements: Alfred 5 with the Powerpack, Python 3.9+ (`/usr/bin/python3` after
 3. For `@keyword` hand-offs run once in Terminal and click OK:
    `osascript -e 'tell application id "com.runningwithcrayons.Alfred" to search "m"'`
 
-Keyword `m`, and a hotkey that opens mash straight on its browse list (unassigned by default; set it on the *Hotkey* node, hyper+M is a good one). Alfred runs the script on every keystroke and cancels a running one when you type the next letter. Alfred also learns which rows you pick and moves them up; mash's journal does the same across both surfaces.
+Keyword `m`, and a hotkey that opens mash straight on its browse list (unassigned by default; set it on the *Hotkey* node, hyper+M is a good one). Alfred runs the script on every keystroke and cancels a running one when you type the next letter. Rows carry no `uid`, so Alfred shows them in the order mash returns and does not reorder them by what it has learned; the journal is what moves used records up, on both surfaces.
 
 A bare `m` without a space shows Alfred's own results (Mail, Music…) with the mash row among them; the space is what hands the query to mash. That is Alfred's rule for keywords that *require a space*. The alternative is a keyword that does not: `make build PLIST_FLAGS=--no-space` builds that bundle, and then `m` alone is the browse list — but so is `ma`, `mu` and anything else starting with `m`, so you would launch Mail some other way. The hotkey sidesteps the question: it opens mash with an empty query and nothing else in the list.
 
@@ -489,7 +504,7 @@ Every keystroke is a fresh process: start Python, walk the folder, match, print.
 | 5,000 | < 80 ms | 71 ms | 44 ms |
 | 20,000 | < 200 ms | 190 ms | 170 ms |
 
-One file per record means one `stat()` per record per keystroke, and without an index also one `open()` and a parse. The first version had no index and measured 41 / 120 / 435 ms, so the **index** came in: `~/.mash/.index` holds every parsed record keyed by path and mtime (a pickle, because the records have to become Python objects anyway and `pickle.load` does that in C). Each keystroke still walks the folder and `stat`s every file, parses only files that are new or changed, drops files that are gone, and rewrites the index only when something changed. The files remain the source of truth; delete `.index` any time.
+One file per record means one `stat()` per record per keystroke, and without an index also one `open()` and a parse. The first version had no index and measured 41 / 120 / 435 ms, so the **index** came in: `~/.mash/.index` holds every parsed record keyed by path and mtime (a pickle, because the records have to become Python objects anyway and `pickle.load` does that in C). Each keystroke still walks the folder and `stat`s every file, parses only files that are new or changed, drops files that are gone, and rewrites the index only when something changed. The files remain the source of truth; delete `.index` any time. Because it is a pickle, loading it can run code, so keep it out of git and out of any sync that brings the tree from a machine you do not control: `echo .index >> ~/.mash/.gitignore`.
 
 What else keeps it fast: one compiled regex per query word, tried weakest-first over the whole lowercased head so a miss costs one search; body fuzzy over a lowercased, punctuation-split copy made at parse time; the fixed cost kept to about 27 ms (interpreter 8, `re` 8, `json` 2, the rest) by importing `subprocess` and friends only when ↩ needs them; `python -S`, `NamedTuple`, no `dataclasses`, no `pathlib`.
 
@@ -504,6 +519,10 @@ The walk is now most of the keystroke at 20k. If that ever matters, the next ste
 - A path body opens only if it exists at search time.
 - A head cannot end in `/` and still be searched as words; `foo/` means the node.
 - Rules resolve to one hit; there is no "all hits" resolution.
+- A rule cannot prompt: blanks in the fact it reaches take their defaults, and a blank without one stops the ↩.
+- The time axis is last use, not creation: reading a record through `~>` makes it the newest.
+- Any term ending in `/` before the arrow names a node, wherever it stands: `m https://example.com/` offers to add to a node called `https://example.com`. Drop the trailing slash, or put the URL after `->`.
+- ⌥↩ and `forget` remove the file. There is no undo other than your own history, so `git init` the tree.
 - Plain text: do not store secrets you would not keep in a dotfile.
 
 ## Development
@@ -526,7 +545,8 @@ The Alfred plumbing (the prompt loop through an external trigger, the conditiona
 | `mash/query.py` | box grammar: terms, `#tags`, `node/`, leading arrow ↔ `Query` |
 | `mash/tree.py` | the folder: one walk → `Snapshot` (records plus every folder with its subtree count), the mtime-keyed index, write and delete files; atomic writes |
 | `mash/match.py` | one regex per word, the four head tiers and the body tier, scoring |
-| `mash/axes.py` | relevance, time, structure as `records → records`; composition from an arrow |
+| `mash/axes.py` | the subtree test and the ordering: score, then fewer head words, then time in the arrow's direction |
+| `mash/search.py` | one pass over the records: subtree, score, time of last touch → ordered `Hit`s |
 | `mash/resolve.py` | rules: context, best hit, recursion, depth cap, chain |
 | `mash/journal.py` | touches, last-touch lookup, compaction |
 | `mash/fill.py` | placeholders and their defaults |
@@ -539,11 +559,13 @@ The Alfred plumbing (the prompt loop through an external trigger, the conditiona
 | `scripts/build.py`, `scripts/smoke.py`, `scripts/make_icons.py` | build `dist/alfred-mash.alfredworkflow`; drive it the way Alfred would; draw the icons |
 | `fish/` | the `mash` and `stash` functions |
 | `bench.py` | per-keystroke latency, `--stress` |
-| `tests/` | pytest, `pytest-mock` for clock, clipboard and subprocess edges |
+| `tests/` | pytest, `pytest-mock` for clock, clipboard and subprocess edges; `test_manual.py` runs the manual's examples |
+| `docs/MANUAL.md` | the user manual: every task, shown on the sample tree |
+| `examples/` | the sample tree, written by `mash add`, with a journal so its time order is the same for everyone |
 
 Order of work: `bench.py` and the tree generator first (so every later step has a number), then `records.py`, `query.py`, `match.py`, `axes.py`, `tree.py`, `resolve.py`, `journal.py`, `actions.py`, `session.py`, `cli.py`, `alfred.py`.
 
-Tests are written first. Every row of every table in this README is a parametrized case, each assert carrying its reason:
+Tests are written first. Every row of every table in this README is a parametrized case, and so is every example in the manual, run against a copy of `examples/`; each assert carries its reason:
 
 ```python
 @pytest.mark.parametrize(

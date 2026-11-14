@@ -1,0 +1,1 @@
+http status -> 301 moved, 304 not modified, 401 unauthorized, 403 forbidden, 429 too many requests

@@ -1,0 +1,1 @@
+ssh box -> ssh {{user=root}}@{{host}} -p {{port=22}}

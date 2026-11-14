@@ -1,0 +1,1 @@
+k8s ctx prod kube -> kubectl config use-context prod
