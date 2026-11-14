@@ -15,7 +15,7 @@ def search(stored_records, query, touched=None):
     browsing = not query.words and not query.tags
     hits = []
     for stored in stored_records:
-        if not axes.in_subtree(query.node, stored):
+        if not axes.in_scope(query.node, stored):
             continue
         points = match.score(query, stored.record)
         if points or browsing:

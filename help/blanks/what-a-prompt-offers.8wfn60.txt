@@ -1,0 +1,1 @@
+what a prompt offers -> what you typed, the default, and the clipboard

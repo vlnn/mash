@@ -1,0 +1,1 @@
+hand-off to another workflow -> a body that starts or ends with an at-sign word; enter opens Alfred with that keyword and the rest

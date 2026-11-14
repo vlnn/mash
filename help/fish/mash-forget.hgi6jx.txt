@@ -1,0 +1,1 @@
+mash forget -> removes the best hit after y; --journal drops only its history; --node removes a folder

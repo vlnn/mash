@@ -1,0 +1,1 @@
+opt-enter delete -> deletes the file and its journal lines; there is no undo

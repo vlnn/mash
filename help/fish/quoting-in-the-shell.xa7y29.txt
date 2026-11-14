@@ -1,0 +1,1 @@
+quoting in the shell -> quote arrows, hash tags and curly braces so fish passes them through

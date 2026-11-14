@@ -1,0 +1,1 @@
+pipes -> output is plain text: pipe a found one-liner into fish to run it, or into pbcopy

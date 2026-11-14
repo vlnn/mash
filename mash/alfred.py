@@ -64,11 +64,17 @@ def row(session, stored):
         "mods": {
             "shift": {"arg": dumps(dict(command, mode="paste")), "subtitle": "Paste"},
             "cmd": {"arg": dumps(act_command(path, "edit")), "subtitle": f"Edit {path}"},
-            "alt": {"arg": dumps(act_command(path, "delete")), "subtitle": "Delete this record"},
+            "alt": delete_mod(stored),
             "ctrl": {"arg": dumps(command), "subtitle": f"{path} · {subtitle}"},
         },
         "text": {"copy": record.body, "largetype": record.body},
     }
+
+
+def delete_mod(stored):
+    if stored.shipped:
+        return {"valid": False, "subtitle": "Part of mash's manual: cannot be deleted"}
+    return {"arg": dumps(act_command(stored.path, "delete")), "subtitle": "Delete this record"}
 
 
 def command_for(stored):

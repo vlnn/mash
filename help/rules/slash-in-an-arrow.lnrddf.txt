@@ -1,0 +1,1 @@
+slash in an arrow -> keeps the search inside the subtree

@@ -1,0 +1,1 @@
+where are my records -> in ~/.mash, one .txt file per record, unless the Folder setting or MASH_FOLDER says otherwise

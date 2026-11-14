@@ -1,0 +1,1 @@
+what counts as a touch -> enter, shift-enter, an add, "mash WORDS" in fish, and every step of a rule

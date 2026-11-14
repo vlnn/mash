@@ -1,0 +1,1 @@
+how to make a queue -> a "~>" rule pointing at a folder: each enter returns the record that waited longest and sends it to the back

@@ -1,0 +1,1 @@
+mash -l -> lists every hit: score, node, head, first body line; mash alone lists everything of yours

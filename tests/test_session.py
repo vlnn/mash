@@ -126,3 +126,38 @@ def test_forget_history_keeps_the_record(home):
     assert home.forget_history(stored) == "Forgot history of: ssh prod web"
     assert stored.identity not in home.journal.touched(), "its lines are gone"
     assert heads(home.listing("prod")) == ["ssh prod web"], "the record is still there"
+
+
+@pytest.mark.parametrize(
+    "node, text",
+    [
+        ("", "ssh prod web -> ssh deploy@10.0.1.5"),
+        ("", "ssh prod web   ->   ssh deploy@10.0.1.5"),
+        ("body", "weight kg #body -> 80"),
+        ("body", "weight ~> weight kg"),
+        ("notes", "bins go out on thursday"),
+        ("", "standup -> {{date}};;done: {{done}}"),
+    ],
+)
+def test_adding_a_record_that_is_already_there_writes_nothing(home, node, text):
+    home.add(node, text)
+    before = len(home.tree.load().records)
+    message = home.add(node, text)
+    assert len(home.tree.load().records) == before, f"{text!r} is already in {node or 'the root'}"
+    assert message.startswith("Already there: "), "the answer says the record exists"
+
+
+@pytest.mark.parametrize(
+    "node, text, why",
+    [
+        ("body", "weight kg #body -> 79", "another value under the same head is a new record"),
+        ("work", "ssh prod web -> ssh deploy@10.0.1.5", "the same line in another node is new"),
+        ("body", "weight => weight kg", "the same head with another arrow is a new record"),
+        ("body", "weight ~> weight", "the same head with another query is a new record"),
+    ],
+)
+def test_adding_a_record_that_differs_writes_a_file(home, node, text, why):
+    before = len(home.tree.load().records)
+    message = home.add(node, text)
+    assert len(home.tree.load().records) == before + 1, why
+    assert message.startswith("Added to "), "and the answer says where it went"

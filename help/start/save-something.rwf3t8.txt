@@ -1,0 +1,1 @@
+save something -> m ssh prod web -> ssh deploy@10.0.1.5 and enter on the Add row

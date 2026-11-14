@@ -1,0 +1,1 @@
+subtitle of a row -> what enter will do: the first body line, "Open" for a link or a path, an arrow to a keyword for a hand-off, the query for a rule

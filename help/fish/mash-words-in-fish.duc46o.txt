@@ -1,0 +1,1 @@
+mash words in fish -> prints the best hit's body, a rule resolved first; exit status 1 on a miss; no clipboard

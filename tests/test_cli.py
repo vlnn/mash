@@ -98,3 +98,53 @@ def test_settings_come_from_alfred_variables(monkeypatch):
     assert cli.settings() == cli.Settings(
         editor="code {file}", flows={"tally": "t", "kobold": "kb"}, max_results=7
     )
+
+
+def test_adding_the_same_record_again_says_it_is_already_there(home, capsys):
+    capsys.readouterr()
+    cli.main(["add", "ssh prod web -> ssh deploy@10.0.1.5"])
+    assert capsys.readouterr().out == "Already there: ssh prod web\n", (
+        "no second file, and it says so"
+    )
+    assert len(list(home.glob("ssh-prod-web.*.txt"))) == 1, "one file for one record"
+
+
+@pytest.fixture
+def manual(tmp_path, monkeypatch):
+    from mash.records import from_box
+    from mash.tree import Tree
+
+    tree = Tree(str(tmp_path / "manual"))
+    tree.add("keys", from_box("shift enter key -> pastes"))
+    monkeypatch.setattr(cli, "MANUAL", tree.root)
+    return tmp_path / "manual"
+
+
+def test_the_manual_is_searched_when_help_is_named(home, manual, capsys):
+    capsys.readouterr()
+    assert cli.main(["help/", "shift"]) == 0, "help/ makes the shipped record a hit"
+    assert capsys.readouterr().out == "pastes\n", "and its body is printed like any other"
+
+
+@pytest.mark.parametrize("argv", [["shift"], ["-l", "shift"], ["-l"]])
+def test_the_manual_stays_out_of_ordinary_commands(home, manual, capsys, argv):
+    capsys.readouterr()
+    cli.main(argv)
+    assert "pastes" not in capsys.readouterr().out, f"mash {' '.join(argv)} is about your records"
+
+
+def test_forget_refuses_a_manual_record_without_asking(home, manual, capsys):
+    capsys.readouterr()
+    assert cli.main(["forget", "help/", "shift"]) == 1, "nothing was forgotten"
+    captured = capsys.readouterr()
+    assert captured.err == "Not deleted: shift enter key is part of mash's manual\n", "it says why"
+    assert "Continue?" not in captured.out, "and never asks"
+    assert len(list((manual / "keys").glob("*.txt"))) == 1, "the file is still there"
+
+
+def test_alfred_lists_help_as_a_folder(home, manual, capsys):
+    capsys.readouterr()
+    cli.main(["--alfred", ""])
+    titles = [item["title"] for item in json.loads(capsys.readouterr().out)["items"]]
+    assert titles[:2] == ["body/", "help/"], "the manual is a folder next to your own"
+    assert "shift enter key" not in titles, "but its records are not in the bare list"

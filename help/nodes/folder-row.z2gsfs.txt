@@ -1,0 +1,1 @@
+folder row -> enter or tab on it puts the folder into the query; it says how many records its subtree holds

@@ -1,0 +1,1 @@
+what is a record -> one .txt file: the first line is head, arrow and body; further lines belong to the body

@@ -1,0 +1,1 @@
+how to add -> there is no add command: whatever you type is offered as the Add row, and enter on it stores it

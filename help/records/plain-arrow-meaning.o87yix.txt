@@ -1,0 +1,1 @@
+plain arrow meaning -> "->" makes a fact: the body is the value, returned as written

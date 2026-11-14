@@ -21,6 +21,7 @@ For mash 0.1.0, as of 2026-11-14. Every example runs against the sample tree in 
   - [Templates](#templates)
   - [Handing off to another workflow](#handing-off-to-another-workflow)
   - [Running what you typed](#running-what-you-typed)
+- [The manual inside mash](#the-manual-inside-mash)
 - [In the terminal](#in-the-terminal)
 - [What "recent" means](#what-recent-means)
 - [Configuration](#configuration)
@@ -68,7 +69,7 @@ mash 0.1.0 has no released bundle; you build it from the source.
    ```
    That writes `dist/alfred-mash.alfredworkflow`. Double-click it and press **Import**.
 2. Alfred shows the configuration sheet. Leave **Python** at `/usr/bin/python3` if you have the Xcode Command Line Tools (`xcode-select --install`), or enter another interpreter's absolute path. Leave **Folder** at `~/.mash`.
-3. Type `m` and a space. On an empty tree you see one row, *Add:*. That is all it takes.
+3. Type `m` and a space. On an empty tree you see two rows: the folder `help/`, which is [the manual inside mash](#the-manual-inside-mash), and *Add:*. That is all it takes.
 4. If you will use `@keyword` hand-offs, run this once in Terminal and click **OK** when macOS asks whether Alfred may control Alfred:
    ```
    osascript -e 'tell application id "com.runningwithcrayons.Alfred" to search "m"'
@@ -239,7 +240,7 @@ On the sample tree (the *Add* row, always present, is left out):
 
 | You type | You get | Why |
 | --- | --- | --- |
-| `m` | body/ · home/ · work/, then every record, most recently touched first | an empty query browses |
+| `m` | body/ · help/ · home/ · work/, then every record of yours, most recently touched first | an empty query browses |
 | `m prod` | ssh prod web · k8s ctx prod kube | whole word; the shorter head first |
 | `m web ssh` | ssh staging web · ssh prod web | any order; equal matches, so the one added later first |
 | `m stg` | ssh staging web · k8s ctx staging kube · wifi guest | letters in order inside *staging*; the last one through its body, *GuestNetwork-5G* |
@@ -321,6 +322,8 @@ There is no add command. Whatever you type after `m` is offered as a new record 
 
 The notification confirms where it went (`Added to garden/: tomatoes sown`), and the new record is the most recently touched one, so it is at the top of a bare `m`.
 
+Adding something that is already there stores nothing. `m home/ wifi guest -> GuestNetwork-5G` ↩ on the sample answers `Already there: wifi guest` and touches the record it found, so it moves up instead of doubling. The same holds for `mash add` and `stash` in fish. Only an exact match counts, in the same folder and with the same head, arrow and body: `m body/ weight kg #body -> 78` ↩ is a new record next to the 80 and the 79, which is what keeps a series possible.
+
 The Alfred box is one line, so `;;` stands for a newline there: `m release notes -> ## {{version}};;- {{done}}` stores a two-line body. A literal `;;` is typed `\;;`. In a file, `;;` is just two characters.
 
 ### Editing and deleting
@@ -335,7 +338,7 @@ A term ending in `/` names a node and narrows everything to that subtree:
 
 | You type | You get | |
 | --- | --- | --- |
-| `m` | body/ · home/ · work/, then every record | the root's folders first |
+| `m` | body/ · help/ · home/ · work/, then every record of yours | the root's folders first; `help/` is the built-in manual |
 | `m wo` | work/, then the records matching `wo` | part of a folder name shows its row |
 | `m chore` | home/chores/ · next chore | folder names are matched at any depth |
 | `m work/` | work/cli/ · work/k8s/, then everything under `work/` | its folders first, like the root |
@@ -470,6 +473,35 @@ m algorithms @books        algorithms book  ·  Run: algorithms @books  ·  Add:
 ```
 
 The `@word` is not searched for, which is why the record is found by `algorithms` alone. The same row appears for a typed link, path or `{{blank}}` text if it happens to match a record, which is rare; with no match there is only *Add*.
+
+## The manual inside mash
+
+mash carries a short version of this manual as records of its own, under the node `help/`. It ships inside the workflow, so it is there before you have stored anything and always matches the version you installed.
+
+| You type | You get |
+| --- | --- |
+| `m` | `help/` among your own folders |
+| `m help/` | a folder per topic (add, blanks, fish, journal, keys, nodes, records, rules, search, setup, start), then the entries |
+| `m help/ delete` | opt-enter delete · deletes the file and its journal lines; there is no undo |
+| `m help/ tilde` | tilde in an arrow · reverses time: least recently touched first |
+| `m help/keys/ paste` | shift-enter paste · copies and pastes into the frontmost app |
+| `m delete` | only *Add*: the manual is searched only when you name `help/` |
+
+Three things set it apart from your own records:
+
+- **It stays out of the way.** A bare `m`, an ordinary search, `mash -l` and your rules never see it. Naming `help/` is what brings it in.
+- **It is read-only.** ⌥↩ is switched off on its rows, and `mash forget` refuses. If you add under `help/`, the record goes into your own tree and is yours.
+- **It is otherwise ordinary.** ↩ copies an entry, ⌘L shows it large, using one moves it up, and a rule of yours can point at it: `review ~> help/keys/`.
+
+**Learning it.** `help/` holds one rule, `quiz ~> help/`, a [queue](#rules) over the whole manual. `m help/ quiz` ↩ shows the entry you have gone longest without seeing, as `quiz → tilde in an arrow → reverses time: least recently touched first`, and sends it to the back. In fish you can have the question before the answer, because `--resolve` shows where the rule leads without using it:
+
+```
+function quiz
+    mash --resolve help/ quiz
+    read -P 'answer? ' -l _
+    mash help/ quiz
+end
+```
 
 ## In the terminal
 
@@ -615,6 +647,7 @@ Leave `.index` out: it is a cache mash rebuilds, and since it is a pickle, loadi
 - A path opens only if it exists when you search.
 - A default inside `{{name=…}}` cannot contain braces.
 - Deleting removes the file; there is no undo.
+- `help/` is read-only and is searched only when you name it.
 - The files are plain text. Do not store secrets you would not keep in a dotfile.
 
 **Troubleshooting**
@@ -642,5 +675,6 @@ Leave `.index` out: it is a cache mash rebuilds, and since it is a pickle, loadi
 | The journal and the index | `.journal.log` and `.index` in that folder |
 | Settings | Alfred → the workflow → **Configure Workflow…** |
 | Hotkey | the *Hotkey* node in the workflow, unassigned by default |
+| The built-in manual | `help/` in the workflow; in mash, `m help/` |
 | The sample tree | `examples/` in the [repository](https://github.com/vlnn/mash) |
 | Every rule and table | [README.md](../README.md); what each feature is for, [DESIGN.md](../DESIGN.md) |

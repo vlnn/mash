@@ -1,0 +1,1 @@
+hash in an arrow -> only records sharing one of the rule's own tags

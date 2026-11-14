@@ -1,0 +1,1 @@
+order of results -> higher score, then fewer head words, then most recently touched

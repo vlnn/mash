@@ -7,7 +7,7 @@ import shutil
 
 import pytest
 
-from mash import actions, alfred, fill
+from mash import actions, alfred, cli, fill
 from mash.journal import Journal
 from mash.session import Session, Settings
 from mash.tree import ID_LENGTH, Tree
@@ -17,6 +17,8 @@ EXAMPLES = os.path.join(REPO, "examples")
 MANUAL = os.path.join(REPO, "docs", "MANUAL.md")
 FLOWS = {"books": "bk"}
 AFTER_THE_SAMPLE_HISTORY = 1_800_000_000
+BUILT_IN = {"help": cli.MANUAL}
+MANUAL_SIZE = len(Tree("", mounts=BUILT_IN).walk()[1])
 
 STAGING_AND_PROD_SSH = ["ssh staging web", "ssh prod web"]
 PROD_AND_STAGING_CTX = ["k8s ctx prod kube", "k8s ctx staging kube"]
@@ -49,6 +51,10 @@ SEARCHES = [
     ("#reading snow", ["book snow crash #reading"]),
     ("paper", ["paper sizes", "paper adam optimizer #ml", "paper attention #reading #ml"]),
     ("weight", ["weight", "weight now", "weight kg #body", "weight kg #body"]),
+    ("delete", []),
+    ("help/ delete", ["opt-enter delete", "what is the index"]),
+    ("help/ tilde", ["tilde in an arrow"]),
+    ("help/keys/ paste", ["shift-enter paste", "banner after enter"]),
     ("size", ["shoe size", "photo sizes", "paper sizes"]),
     ("a4", ["paper sizes"]),
     ("e27", ["bulbs"]),
@@ -59,7 +65,7 @@ SEARCHES = [
 ]
 
 FOLDERS = [
-    ("", [("body", 4), ("home", 18), ("work", 17)]),
+    ("", [("body", 4), ("help", MANUAL_SIZE), ("home", 18), ("work", 17)]),
     ("wo", [("work", 17)]),
     ("work/", [("work/cli", 6), ("work/k8s", 3)]),
     ("home/", [("home/chores", 3), ("home/recipes", 3)]),
@@ -110,7 +116,7 @@ def sample(tmp_path, mocker):
     folder = str(tmp_path / "mash")
     shutil.copytree(EXAMPLES, folder)
     journal = Journal(os.path.join(folder, ".journal.log"))
-    return Session(Tree(folder), journal, Settings(flows=FLOWS))
+    return Session(Tree(folder, mounts=BUILT_IN), journal, Settings(flows=FLOWS))
 
 
 @pytest.fixture(scope="module")
@@ -207,6 +213,15 @@ def test_a_miss_is_one_enter_from_being_stored(sample):
     assert heads(sample.listing("tomato")) == ["tomatoes sown"], "and the next search finds it"
 
 
+def test_adding_what_is_already_there_stores_nothing(sample):
+    before = len(sample.tree.load().records)
+    assert sample.add("home", "wifi guest -> GuestNetwork-5G") == "Already there: wifi guest", (
+        "the sample already holds this record in home/"
+    )
+    assert len(sample.tree.load().records) == before, "so no second file is written"
+    assert heads(sample.listing("wifi")) == ["wifi guest", "wifi office"], "and it stays one row"
+
+
 def test_blanks_are_asked_in_order_with_their_defaults(sample):
     body = by_head(sample, "ssh box").body
     assert fill.blanks(body) == [("user", "root"), ("host", None), ("port", "22")], (
@@ -238,6 +253,6 @@ def test_the_manual_lists_every_sample_record(manual, file):
 
 def test_every_sample_record_was_written_by_mash_and_has_history(sample):
     touched = sample.journal.touched()
-    records = sample.tree.load().records
+    records = [s for s in sample.tree.load().records if not s.shipped]
     assert all(len(s.identity) == ID_LENGTH for s in records), "every sample file carries an id"
     assert {s.identity for s in records} == set(touched), "and one journal line per record"

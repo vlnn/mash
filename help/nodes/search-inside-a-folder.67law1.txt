@@ -1,0 +1,1 @@
+search inside a folder -> end a term with a slash: "m work/ ctx" searches only under work

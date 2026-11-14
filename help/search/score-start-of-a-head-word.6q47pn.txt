@@ -1,0 +1,1 @@
+score start of a head word -> 6

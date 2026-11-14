@@ -17,6 +17,14 @@ def files():
     for name in sorted(os.listdir(os.path.join(ROOT, "mash"))):
         if name.endswith(".py"):
             yield os.path.join("mash", name)
+    yield from manual()
+
+
+def manual():
+    for folder, _, names in sorted(os.walk(os.path.join(ROOT, "help"))):
+        for name in sorted(names):
+            if name.endswith(".txt"):
+                yield os.path.relpath(os.path.join(folder, name), ROOT)
 
 
 def main():

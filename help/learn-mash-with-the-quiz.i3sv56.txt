@@ -1,0 +1,1 @@
+learn mash with the quiz -> type "m help/ quiz" and press enter: each press shows the entry you have gone longest without seeing

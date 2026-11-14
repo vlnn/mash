@@ -1,0 +1,1 @@
+enter on a path -> opens it if it exists when you search, otherwise copies it

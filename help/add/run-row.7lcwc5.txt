@@ -1,0 +1,1 @@
+run row -> appears when the typed text is itself usable, in practice a hand-off, and it also found a record; it acts without storing

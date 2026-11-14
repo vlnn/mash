@@ -101,6 +101,10 @@ class Session:
 
     def add(self, node, text):
         record = record_grammar.from_box(text)
+        twin = twin_of(self.tree.load().records, node, record)
+        if twin:
+            self.journal.touch(twin.identity, "add", node)
+            return f"Already there: {record.head}"
         path = self.tree.add(node, record)
         self.journal.touch(self.tree.read(path).identity, "add", node)
         return f"Added to {node + '/' if node else '.'}: {record.head}"
@@ -116,6 +120,8 @@ class Session:
         return f"Editing {stored.path}"
 
     def delete(self, stored):
+        if stored.shipped:
+            return f"Not deleted: {stored.record.head} is part of mash's manual"
         try:
             self.tree.delete(stored)
         except LookupError as error:
@@ -138,6 +144,10 @@ class Session:
             for choice in dict.fromkeys(c for c in (typed, default, read_clipboard().strip()) if c)
         ]
         return Prompt(name, total - len(pending) + 1, total, options)
+
+
+def twin_of(stored_records, node, record):
+    return next((s for s in stored_records if s.node == node and s.record == record), None)
 
 
 def option(body, values, name, choice, more):

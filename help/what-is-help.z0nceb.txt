@@ -1,0 +1,1 @@
+what is help -> the manual that ships with mash, mounted read-only at help/; it is searched only when you name help/, so it never mixes into your own results

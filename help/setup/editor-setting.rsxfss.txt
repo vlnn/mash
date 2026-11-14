@@ -1,0 +1,1 @@
+editor setting -> the command for cmd-enter, with {file} filled in; give the tool's full path

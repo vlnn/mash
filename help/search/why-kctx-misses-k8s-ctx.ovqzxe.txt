@@ -1,0 +1,1 @@
+why kctx misses k8s ctx -> letters in order must stay inside one word; "k ctx" finds it

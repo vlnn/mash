@@ -1,0 +1,1 @@
+folders versus tags -> a folder is where a record lives, a tag is what it is part of, across folders

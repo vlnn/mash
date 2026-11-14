@@ -1,0 +1,1 @@
+synonym rule -> "dashboard => grafana api latency" lets your word stand for a record filed under other words

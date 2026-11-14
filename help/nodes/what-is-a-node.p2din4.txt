@@ -1,0 +1,1 @@
+what is a node -> a folder in the tree; it exists exactly when the folder does

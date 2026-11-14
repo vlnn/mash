@@ -20,6 +20,7 @@ See also [docs/MANUAL.md](docs/MANUAL.md): a task-by-task walkthrough on the sam
 ## Contents
 
 - [Quick start](#quick-start)
+- [The built-in manual](#the-built-in-manual)
 - [The tree](#the-tree)
 - [Records](#records)
   - [Facts](#facts)
@@ -56,9 +57,27 @@ m work/ k8s ctx staging -> kubectl config use-context staging
                                            ↩ adds under the node work/, creating it
 m work/                                    work/'s folders, then everything in work/
 m                                          the root's folders, then everything, most recently touched first
+m help/ arrow                              searches the manual that ships with mash
 ```
 
 `m` is the Alfred keyword; in fish the command is `mash` and takes the same text.
+
+## The built-in manual
+
+mash ships a manual of itself as records, mounted read-only at the node `help/`. The files are the `help/` folder of this repository and travel inside the workflow; nothing is copied into your tree.
+
+```
+m help/                 the manual's folders, one per topic, then its records
+m help/ delete          opt-enter delete  ·  deletes the file and its journal lines; there is no undo
+m help/keys/            everything about ↩ and the other keys
+m help/ quiz            ↩ a rule over the whole manual: the entry you have gone longest without seeing
+mash help/ tilde        the same from fish: reverses time: least recently touched first
+```
+
+- Manual records are found **only when the query names `help/`**. A bare `m`, `m delete`, `mash -l` and your own rules see your records and nothing else. `help/` itself shows once, as a folder row on a bare `m`, which is also the first thing a new install lists.
+- In every other way they are records: ↩ copies, ⌘L shows Large Type, a touch goes to your journal under the record's id, and a rule of yours may point at them (`review ~> help/keys/`).
+- The mount is read-only. ⌥↩ is switched off on its rows and `mash forget` refuses without asking. Adding under `help/` writes to your own tree (`~/.mash/help/`); such a record is yours, found everywhere and deletable.
+- Every shipped fact copies on ↩: none opens or hands off, and every blank has a default. That keeps `quiz ~> help/` going round without a stall. `tests/test_help.py` checks each record, and that the bundle carries all of them.
 
 ## The tree
 
@@ -68,7 +87,7 @@ Everything lives under one folder, `~/.mash` by default.
 - A **record** is a `*.txt` file. Its first line is the head and the arrow; the rest is the body.
 - A **subfolder** is a child node. Nesting is unlimited.
 - A node exists exactly when its folder does. Adding under `work/k8s/` creates the folders on the way.
-- Every record mash writes gets an **id**: six random letters and digits, carried in the file name as `slug.id.txt`. The id is the record's identity: the journal refers to it, so you can edit the head, rename the slug part, or move the file to another node and its history follows. Two records with the same head are two records. A file you create by hand without an id is identified by its place instead (`work/notes` for `work/notes.txt`), which holds until you rename or move it.
+- Every record mash writes gets an **id**: six random letters and digits, carried in the file name as `slug.id.txt`. The id is the record's identity: the journal refers to it, so you can edit the head, rename the slug part, or move the file to another node and its history follows. Two records with the same head are two records, as long as something else differs: the node, the arrow or the body. A file you create by hand without an id is identified by its place instead (`work/notes` for `work/notes.txt`), which holds until you rename or move it.
 - The **slug** is derived from the head: lowercase, words joined by `-`, anything that is not a letter, digit or `-` dropped, `#` tags kept as words (`weight kg #body` → `weight-kg-body`). It is for you and your editor; search never reads file names.
 
 ```
@@ -345,6 +364,7 @@ There is no add mode and no add command in the box. Whatever you type is always 
 - As soon as the text contains an arrow, *Add* moves to the top; the head words are still searched so you see whether such a record already exists.
 - A leading `node/` makes *Add* store there, creating the node if needed. The row says so: `Add to work/k8s/ (new node)`.
 - A new file is written in that node, named from the head. The folder is the source of truth; move or rename files freely.
+- A record that is already in that node, with the same head, arrow and body, is not written again: ↩ touches the one that is there, so it moves up, and answers *Already there: …*. The same head with another body is a new record, which is how a series such as `weight kg` is kept.
 
 | you type | file (`<id>` is six random characters) | contents | shown as |
 |---|---|---|---|
@@ -353,7 +373,8 @@ There is no add mode and no add command in the box. Whatever you type is always 
 | `weight ~> weight kg` | `weight.<id>.txt` | the same line | weight |
 | `http://127.0.0.1:4000` | `http-127-0-0-1-4000.<id>.txt` | the same line | http://127.0.0.1:4000 |
 | `work/ k8 ctx -> kubectl …` | `work/k8-ctx.<id>.txt` | `k8 ctx -> kubectl …` | k8 ctx |
-| `ssh prod web -> …` again | `ssh-prod-web.<other id>.txt` | | ssh prod web (both show) |
+| `ssh prod web -> ssh deploy@10.0.1.5` again | none: it is already there | | ssh prod web, touched |
+| `ssh prod web -> ssh deploy@10.0.2.9` | `ssh-prod-web.<other id>.txt` | the same line | ssh prod web (both show) |
 
 A query that is itself usable — `@kw` at either end, a URL, an existing path, or text with `{{…}}` — *and* that found something also gets a **Run: …** row between the hits and *Add*; it acts on the text without storing it. In practice that is the hand-off: the `@word` is not a search term, so `delany @kobold` finds *delany books* and offers *Run*, while a typed URL seldom matches a record and gets only *Add*.
 
@@ -428,6 +449,7 @@ mash prod                         prints the resolved body of the best hit
 mash weight                       resolves the rule, prints 80
 mash -l stg                       lists every hit, one per line: score, node, head, first body line
 mash -l                           lists everything, most recent first
+mash help/ tilde                  searches the built-in manual; help/ works in every command
 mash -l '~> weight kg'            oldest first (quote arrows and {{…}} for the shell)
 mash add 'ssh prod web -> ssh deploy@10.0.1.5'
 mash add 'work/ k8 ctx -> kubectl config use-context staging'
@@ -543,9 +565,9 @@ The Alfred plumbing (the prompt loop through an external trigger, the conditiona
 |---|---|
 | `mash/records.py` | record grammar: first line → head, arrow, body; `;;` from the box; file name from head ↔ `Record` |
 | `mash/query.py` | box grammar: terms, `#tags`, `node/`, leading arrow ↔ `Query` |
-| `mash/tree.py` | the folder: one walk → `Snapshot` (records plus every folder with its subtree count), the mtime-keyed index, write and delete files; atomic writes |
+| `mash/tree.py` | the folder: one walk → `Snapshot` (records plus every folder with its subtree count), the mtime-keyed index, write and delete files; atomic writes; read-only mounts, whose records are marked `shipped` |
 | `mash/match.py` | one regex per word, the four head tiers and the body tier, scoring |
-| `mash/axes.py` | the subtree test and the ordering: score, then fewer head words, then time in the arrow's direction |
+| `mash/axes.py` | the scope test (subtree, and shipped records only when a node is named) and the ordering: score, then fewer head words, then time in the arrow's direction |
 | `mash/search.py` | one pass over the records: subtree, score, time of last touch → ordered `Hit`s |
 | `mash/resolve.py` | rules: context, best hit, recursion, depth cap, chain |
 | `mash/journal.py` | touches, last-touch lookup, compaction |
@@ -561,6 +583,7 @@ The Alfred plumbing (the prompt loop through an external trigger, the conditiona
 | `bench.py` | per-keystroke latency, `--stress` |
 | `tests/` | pytest, `pytest-mock` for clock, clipboard and subprocess edges; `test_manual.py` runs the manual's examples |
 | `docs/MANUAL.md` | the user manual: every task, shown on the sample tree |
+| `help/` | the built-in manual: records written by `mash add`, mounted at `help/` and bundled by `scripts/build.py` |
 | `examples/` | the sample tree, written by `mash add`, with a journal so its time order is the same for everyone |
 
 Order of work: `bench.py` and the tree generator first (so every later step has a number), then `records.py`, `query.py`, `match.py`, `axes.py`, `tree.py`, `resolve.py`, `journal.py`, `actions.py`, `session.py`, `cli.py`, `alfred.py`.

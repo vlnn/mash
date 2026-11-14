@@ -1,0 +1,1 @@
+multi-line body in the alfred box -> two semicolons become a newline; a backslash before them keeps them literal

@@ -1,0 +1,1 @@
+cmd-enter edit -> opens the record's file in your editor

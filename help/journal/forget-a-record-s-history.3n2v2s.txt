@@ -1,0 +1,1 @@
+forget a record's history -> mash forget --journal WORDS keeps the record and drops its journal lines

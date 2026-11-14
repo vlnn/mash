@@ -7,6 +7,10 @@ def in_subtree(node, stored):
     return not node or stored.node == node or stored.node.startswith(node + "/")
 
 
+def in_scope(node, stored):
+    return in_subtree(node, stored) and (bool(node) or not stored.shipped)
+
+
 def order(hits, axes):
     direction = 1 if OLDEST_FIRST in axes else -1
     return sorted(hits, key=lambda hit: (-hit.score, tightness(hit), direction * hit.time))

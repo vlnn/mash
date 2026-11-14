@@ -1,0 +1,1 @@
+enter on a link -> opens it: http, https and file schemes

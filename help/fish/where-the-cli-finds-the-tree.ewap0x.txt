@@ -1,0 +1,1 @@
+where the cli finds the tree -> MASH_FOLDER, or the default folder in your home when unset

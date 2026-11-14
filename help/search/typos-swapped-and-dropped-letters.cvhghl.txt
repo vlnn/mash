@@ -1,0 +1,1 @@
+typos swapped and dropped letters -> dropped letters match (stgng finds staging), swapped ones do not (stgaing)

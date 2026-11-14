@@ -1,0 +1,1 @@
+nested folders -> node terms in a row make one path: "work/" then "k8s/" is the node work/k8s

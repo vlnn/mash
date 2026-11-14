@@ -1,0 +1,1 @@
+shift-enter paste -> copies and pastes into the frontmost app

@@ -1,0 +1,1 @@
+add into a folder -> start with the folder and a slash; a new name creates the folder and the row says "new node"

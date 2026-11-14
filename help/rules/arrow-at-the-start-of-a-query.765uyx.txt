@@ -1,0 +1,1 @@
+arrow at the start of a query -> works as in a rule: "m ~> weight kg" lists the least recently touched first

@@ -10,11 +10,13 @@ from mash.tree import Tree
 
 DEFAULT_FOLDER = "~/.mash"
 JOURNAL = ".journal.log"
+MANUAL = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "help")
 
 USAGE = """mash — fuzzy search over a tree of plain-text records
 
   mash WORDS              print the resolved body of the best hit
   mash -l [WORDS]         list every hit: score, node, head, first line
+  mash help/ WORDS        search the manual that ships with mash
   mash add 'HEAD -> BODY' store a record (node/ first to choose the node)
   mash fill BODY k=v ...  fill {{blanks}} in a body
   mash forget WORDS       remove the best-matching record and its history
@@ -46,7 +48,8 @@ def settings():
 
 
 def session():
-    return Session(Tree(folder()), Journal(os.path.join(folder(), JOURNAL)), settings())
+    tree = Tree(folder(), mounts={"help": MANUAL})
+    return Session(tree, Journal(os.path.join(folder(), JOURNAL)), settings())
 
 
 COMMANDS = {}
@@ -131,6 +134,9 @@ def forget(argv):
         print("nothing matches", file=sys.stderr)
         return 1
     stored = hits[0].stored
+    if stored.shipped and not history_only:
+        print(current.delete(stored), file=sys.stderr)
+        return 1
     what = "history of" if history_only else "record"
     if not confirm(f"forget {what} {stored.record.head!r} in {stored.node or '.'} ({stored.path})"):
         return 1

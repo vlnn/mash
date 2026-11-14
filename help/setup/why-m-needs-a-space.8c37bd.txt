@@ -1,0 +1,1 @@
+why m needs a space -> a bare m shows Alfred's own results; the space hands the query to mash

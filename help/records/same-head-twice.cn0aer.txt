@@ -1,0 +1,1 @@
+same head twice -> two records, as long as the folder, the arrow or the body differs; an exact repeat is not stored again

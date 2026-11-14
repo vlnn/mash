@@ -102,3 +102,12 @@ def test_resolving_a_fact_is_the_fact_itself():
     result = resolve(CORPUS, fact)
     assert result.fact is fact, "a fact resolves to itself"
     assert result.chain == [fact], "with a one-step chain"
+
+
+def test_a_rule_read_afresh_is_not_its_own_hit():
+    corpus = [stored("latest paper => paper"), stored("paper sizes and weights -> A4")]
+    read_again = corpus[0]._replace()
+    chain = resolve(corpus, read_again).chain
+    assert [s.record.head for s in chain] == ["latest paper", "paper sizes and weights"], (
+        "a rule whose query matches its own head still resolves past itself"
+    )

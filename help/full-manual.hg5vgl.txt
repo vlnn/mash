@@ -1,0 +1,1 @@
+full manual -> the long version with a sample tree is docs/MANUAL.md at github.com/vlnn/mash

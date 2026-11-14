@@ -1,0 +1,1 @@
+body search -> a word no head has is looked for in the body, as letters in order inside one body word

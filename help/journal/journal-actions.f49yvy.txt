@@ -1,0 +1,1 @@
+journal actions -> copy, paste, print and add: the key pressed, not what it did

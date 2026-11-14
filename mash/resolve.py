@@ -29,7 +29,7 @@ def resolve(stored_records, start, touched=None):
 
 def best_hit(stored_records, rule, touched):
     query, pinned = rule_query(rule)
-    candidates = [s for s in stored_records if s is not rule and shares_tags(query, rule, s)]
+    candidates = [s for s in stored_records if s.path != rule.path and shares_tags(query, rule, s)]
     hits = search.search(candidates, query, touched)
     if not hits and not pinned:
         hits = search.search(candidates, query._replace(node=""), touched)

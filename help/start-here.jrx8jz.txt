@@ -1,0 +1,1 @@
+start here -> type "m help/" and a word to search this manual, or press enter on a folder row to walk into it

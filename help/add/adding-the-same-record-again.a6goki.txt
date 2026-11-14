@@ -1,0 +1,1 @@
+adding the same record again -> stores nothing: it touches the one already there and answers "Already there"

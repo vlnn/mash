@@ -1,0 +1,1 @@
+what is mash -> fuzzy search over the one-liners, links, paths and facts you saved as plain text; "m" in Alfred, "mash" in fish

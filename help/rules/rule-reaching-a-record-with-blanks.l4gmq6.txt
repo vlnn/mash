@@ -1,0 +1,1 @@
+rule reaching a record with blanks -> defaults are applied; a blank without one stops with "Fill in the blanks first"

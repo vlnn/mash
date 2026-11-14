@@ -14,6 +14,7 @@ class Journal:
         self.path = path
 
     def touch(self, identity, action, node=""):
+        os.makedirs(os.path.dirname(self.path) or ".", exist_ok=True)
         with open(self.path, "a", encoding="utf-8") as f:
             f.write(format_line(now(), identity, node, action))
         if self.probably_long() and self.line_count() > COMPACT_AT:

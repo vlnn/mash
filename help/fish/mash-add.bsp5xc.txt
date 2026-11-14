@@ -1,0 +1,1 @@
+mash add -> stores a record from the shell; start with a folder and a slash to choose where

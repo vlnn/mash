@@ -1,0 +1,1 @@
+deleting the journal loses -> the ordering and nothing else

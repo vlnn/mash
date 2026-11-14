@@ -16,6 +16,7 @@ class Stored(NamedTuple):
     node: str
     path: str
     mtime: float
+    shipped: bool = False
 
     @property
     def name(self):
@@ -39,8 +40,9 @@ class Snapshot(NamedTuple):
 
 
 class Tree:
-    def __init__(self, root):
+    def __init__(self, root, mounts=None):
         self.root = root
+        self.mounts = dict(mounts or {})
 
     def load(self):
         folders, files = self.walk()
@@ -56,7 +58,7 @@ class Tree:
                 changed = True
         if changed or len(fresh) != len(index):
             self.write_index(fresh)
-        records = stored_from(fresh)
+        records = stored_from(fresh, self.is_shipped)
         return Snapshot(records, subtree_counts(folders, records))
 
     def read_index(self):
@@ -74,25 +76,21 @@ class Tree:
             )
 
     def read(self, path):
-        return Stored(read_record(path), self.node_of(path), path, os.stat(path).st_mtime)
+        return Stored(
+            read_record(path),
+            self.node_of(path),
+            path,
+            os.stat(path).st_mtime,
+            self.is_shipped(path),
+        )
 
     def walk(self):
-        folders, files = [], []
-        if not os.path.isdir(self.root):
-            return folders, files
-        pending = [(self.root, "")]
-        while pending:
-            folder, node = pending.pop()
-            with os.scandir(folder) as entries:
-                for entry in sorted(entries, key=lambda e: e.name):
-                    if entry.name.startswith("."):
-                        continue
-                    if entry.is_dir():
-                        child = join_node(node, entry.name)
-                        folders.append(child)
-                        pending.append((entry.path, child))
-                    elif entry.name.endswith(EXTENSION):
-                        files.append((node, entry))
+        folders, files = walk_folder(self.root, "")
+        for name, base in self.mounts.items():
+            if os.path.isdir(base):
+                mounted_folders, mounted_files = walk_folder(base, name)
+                folders += [name, *mounted_folders]
+                files += mounted_files
         return folders, files
 
     def add(self, node, record):
@@ -109,12 +107,44 @@ class Tree:
         os.remove(stored.path)
 
     def node_of(self, path):
-        relative = os.path.relpath(os.path.dirname(path), self.root)
-        return "" if relative == "." else relative.replace(os.sep, "/")
+        name, base = self.mount_of(path) or ("", self.root)
+        relative = os.path.relpath(os.path.dirname(path), base)
+        return name if relative == "." else join_node(name, relative.replace(os.sep, "/"))
+
+    def mount_of(self, path):
+        return next((mount for mount in self.mounts.items() if is_inside(mount[1], path)), None)
+
+    def is_shipped(self, path):
+        return self.mount_of(path) is not None
 
 
-def stored_from(index):
-    return [Stored(record, node, path, mtime) for path, (mtime, node, record) in index.items()]
+def walk_folder(root, root_node):
+    folders, files = [], []
+    pending = [(root, root_node)] if os.path.isdir(root) else []
+    while pending:
+        folder, node = pending.pop()
+        with os.scandir(folder) as entries:
+            for entry in sorted(entries, key=lambda e: e.name):
+                if entry.name.startswith("."):
+                    continue
+                if entry.is_dir():
+                    child = join_node(node, entry.name)
+                    folders.append(child)
+                    pending.append((entry.path, child))
+                elif entry.name.endswith(EXTENSION):
+                    files.append((node, entry))
+    return folders, files
+
+
+def is_inside(folder, path):
+    return path.startswith(os.path.join(folder, ""))
+
+
+def stored_from(index, is_shipped):
+    return [
+        Stored(record, node, path, mtime, is_shipped(path))
+        for path, (mtime, node, record) in index.items()
+    ]
 
 
 def subtree_counts(folders, stored_records):

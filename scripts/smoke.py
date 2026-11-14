@@ -51,6 +51,10 @@ def main():
     assert items[0]["title"] == "ssh prod web", items
     print(items[0]["subtitle"])
     assert [n for n in os.listdir(data) if n.startswith("ssh-prod-web.")], os.listdir(data)
+
+    items = json.loads(sh(workflow, filter_script, "help/ quiz", env))["items"]
+    assert items[0]["title"] == "quiz", items
+    print(items[0]["subtitle"])
     print("smoke ok")
 
 

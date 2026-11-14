@@ -1,0 +1,1 @@
+is anything run -> no: enter copies, opens or hands off; a shell line is never executed

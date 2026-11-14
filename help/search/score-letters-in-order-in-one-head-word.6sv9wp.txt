@@ -1,0 +1,1 @@
+score letters in order in one head word -> 2

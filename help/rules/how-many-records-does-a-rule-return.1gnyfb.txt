@@ -1,0 +1,1 @@
+how many records does a rule return -> one, the best hit; never a list

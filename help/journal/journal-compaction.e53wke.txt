@@ -1,0 +1,1 @@
+journal compaction -> past 10,000 lines it shrinks to one line per record: last touch plus a count

@@ -1,0 +1,1 @@
+cmd-c and cmd-l -> copy the body as written, and show it in Large Type

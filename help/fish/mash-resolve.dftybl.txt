@@ -1,0 +1,1 @@
+mash --resolve -> prints the chain of heads a rule would follow, touching nothing

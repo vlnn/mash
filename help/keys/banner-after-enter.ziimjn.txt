@@ -1,0 +1,1 @@
+banner after enter -> says what happened: Copied, Opened, Pasted, Added, or the chain a rule followed

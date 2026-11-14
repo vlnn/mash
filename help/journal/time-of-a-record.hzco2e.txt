@@ -1,0 +1,1 @@
+time of a record -> its last touch, or the file's modification time if it was never touched

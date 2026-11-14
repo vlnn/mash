@@ -1,0 +1,1 @@
+when does a record match -> when every query word matches its head or its body; otherwise it is not listed

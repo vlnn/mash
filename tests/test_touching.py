@@ -85,3 +85,14 @@ def test_forgetting_history_makes_a_record_oldest_by_mtime(home):
     assert press(home, "oldest") == "oldest → weight kg #body → 80", (
         "with no journal lines it falls back to its file mtime, which is the oldest"
     )
+
+
+def test_adding_a_record_that_is_already_there_touches_it(home):
+    before = dict(home.journal.touched())
+    home.add("body", "weight kg #body -> 80")
+    after = home.journal.touched()
+    assert set(after) == set(before), "no new record entered the journal"
+    assert sum(after[i] != before[i] for i in after) == 1, "the 80 already there was touched"
+    assert press(home, "newest") == "newest → weight kg #body → 80", (
+        "so the 80 is now the most recently touched weight"
+    )

@@ -1,0 +1,1 @@
+ctrl held -> shows the record's file and what enter will do

@@ -1,0 +1,1 @@
+where does a rule search -> its own folder's subtree first, the whole tree only if that finds nothing

@@ -1,0 +1,1 @@
+other arrows meaning -> "=>", "~>", "/>" and "#>" make a rule: the rest is a search, run on enter
