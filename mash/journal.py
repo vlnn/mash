@@ -1,8 +1,15 @@
 import os
 import time
+from typing import NamedTuple
 
 COMPACT_AT = 10_000
 ROOT = "."
+COMPACTED = "touched x"
+
+
+class Use(NamedTuple):
+    count: int
+    last: float
 
 
 def now():
@@ -26,6 +33,13 @@ class Journal:
             latest[identity] = max(stamp, latest.get(identity, 0.0))
         return latest
 
+    def uses(self):
+        found = {}
+        for stamp, identity, _, action in self.lines():
+            known = found.get(identity, Use(0, 0.0))
+            found[identity] = Use(known.count + count_of(action), max(stamp, known.last))
+        return found
+
     def forget(self, identity):
         self.rewrite(lambda line: line[1] != identity)
 
@@ -38,7 +52,7 @@ class Journal:
             latest[identity] = max(stamp, latest.get(identity, 0.0))
             nodes[identity] = node
             counts[identity] = counts.get(identity, 0) + 1
-        self.write(format_line(latest[i], i, nodes[i], f"touched x{counts[i]}") for i in latest)
+        self.write(format_line(latest[i], i, nodes[i], f"{COMPACTED}{counts[i]}") for i in latest)
 
     def rewrite(self, keep):
         self.write(format_line(*line) for line in self.lines() if keep(line))
@@ -64,6 +78,11 @@ class Journal:
     def line_count(self):
         with open(self.path, "rb") as f:
             return sum(1 for _ in f)
+
+
+def count_of(action):
+    number = action[len(COMPACTED) :]
+    return int(number) if action.startswith(COMPACTED) and number.isdigit() else 1
 
 
 def format_line(stamp, identity, node, action):

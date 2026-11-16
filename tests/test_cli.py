@@ -1,17 +1,30 @@
 import json
+import time
 
 import pytest
 
 from mash import cli
 
 
-@pytest.fixture
-def home(tmp_path, monkeypatch):
+def seed(tmp_path, monkeypatch):
     monkeypatch.setenv("MASH_FOLDER", str(tmp_path / "mash"))
     cli.main(["add", "ssh prod web -> ssh deploy@10.0.1.5"])
     cli.main(["add", "body/ weight kg #body -> 80"])
     cli.main(["add", "body/ weight ~> weight kg"])
     return tmp_path / "mash"
+
+
+@pytest.fixture
+def home(tmp_path, monkeypatch):
+    return seed(tmp_path, monkeypatch)
+
+
+@pytest.fixture
+def home_on_the_first_of_november(tmp_path, monkeypatch, mocker):
+    monkeypatch.setenv("TZ", "UTC")
+    time.tzset()
+    mocker.patch("mash.journal.now", return_value=1_793_500_000.0)
+    return seed(tmp_path, monkeypatch)
 
 
 def test_best_prints_resolved_body(home, capsys):
@@ -148,3 +161,93 @@ def test_alfred_lists_help_as_a_folder(home, manual, capsys):
     titles = [item["title"] for item in json.loads(capsys.readouterr().out)["items"]]
     assert titles[:2] == ["body/", "help/"], "the manual is a folder next to your own"
     assert "shift enter key" not in titles, "but its records are not in the bare list"
+
+
+@pytest.mark.parametrize(
+    "argv, line",
+    [
+        (["brain"], "  body  ·  2 records · last used 2026-11-01  #body"),
+        (["brain"], "    weight  ·  ~> weight kg"),
+        (["brain", "--facts"], "  ssh prod web  ·  ssh deploy@10.0.1.5"),
+        (["brain", "--facts"], "    weight kg #body  ·  80  #body"),
+    ],
+)
+def test_brain_prints_the_plan_as_an_outline(home_on_the_first_of_november, capsys, argv, line):
+    capsys.readouterr()
+    assert cli.main(argv) == 0, "showing the plan always succeeds"
+    assert line in capsys.readouterr().out.splitlines(), f"{argv} should print {line!r}"
+
+
+def test_brain_leaves_the_built_in_manual_out(home, capsys):
+    capsys.readouterr()
+    cli.main(["brain", "--facts"])
+    assert "  help" not in capsys.readouterr().out, "the manual is mash's, not part of your tree"
+
+
+def test_brain_sync_needs_a_key(home, capsys, monkeypatch, mocker):
+    monkeypatch.delenv("MASH_BRAIN_KEY", raising=False)
+    run = mocker.patch("mash.brainsync.run")
+    assert cli.main(["brain", "sync"]) == 1, "without a key nothing can be sent"
+    assert "MASH_BRAIN_KEY" in capsys.readouterr().err, "and the message names the setting"
+    run.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "argv, prune, facts",
+    [
+        (["brain", "sync"], False, False),
+        (["brain", "sync", "--prune"], True, False),
+        (["brain", "sync", "--facts"], False, True),
+    ],
+)
+def test_brain_sync_hands_the_plan_and_settings_over(home, monkeypatch, mocker, argv, prune, facts):
+    from mash.brainsync import Report
+
+    monkeypatch.setenv("MASH_BRAIN_KEY", "secret")
+    monkeypatch.setenv("MASH_BRAIN_ID", "mine")
+    monkeypatch.setenv("MASH_BRAIN_URL", "http://localhost:9")
+    run = mocker.patch("mash.brainsync.run", return_value=Report(0, 0, 0, 0, 0, 0))
+    assert cli.main(argv) == 0, "a sync that went through exits 0"
+    plan, folder, key, brain_id, url, pruning = run.call_args.args
+    assert (folder, key, brain_id, url) == (str(home), "secret", "mine", "http://localhost:9"), (
+        "the tree's folder and the three settings are passed on"
+    )
+    assert pruning is prune, f"{argv} should prune: {prune}"
+    assert (
+        "record:" in " ".join(t.key for t in plan.thoughts if t.type == "type:fact")
+    ) is facts, f"{argv} should plan facts: {facts}"
+
+
+@pytest.mark.parametrize(
+    "report, printed",
+    [
+        ((6, 1, 0, 6, 2, 0), "TheBrain: 6 created, 1 updated, 6 linked, 2 unlinked, 0 removed\n"),
+        (
+            (0, 0, 0, 0, 0, 2),
+            "TheBrain: 0 created, 0 updated, 0 linked, 0 unlinked, 0 removed\n"
+            "2 thoughts are no longer in mash; mash brain sync --prune deletes them\n",
+        ),
+        (
+            (0, 0, 0, 0, 0, 1),
+            "TheBrain: 0 created, 0 updated, 0 linked, 0 unlinked, 0 removed\n"
+            "1 thought is no longer in mash; mash brain sync --prune deletes it\n",
+        ),
+    ],
+)
+def test_brain_sync_reports_what_changed(home, monkeypatch, mocker, capsys, report, printed):
+    from mash.brainsync import Report
+
+    monkeypatch.setenv("MASH_BRAIN_KEY", "secret")
+    mocker.patch("mash.brainsync.run", return_value=Report(*report))
+    capsys.readouterr()
+    cli.main(["brain", "sync"])
+    assert capsys.readouterr().out == printed, f"{report} should be reported as {printed!r}"
+
+
+def test_brain_sync_reports_a_failure_and_exits_one(home, monkeypatch, mocker, capsys):
+    from mash.brainsync import BrainError
+
+    monkeypatch.setenv("MASH_BRAIN_KEY", "secret")
+    mocker.patch("mash.brainsync.run", side_effect=BrainError("TheBrain is not answering"))
+    assert cli.main(["brain", "sync"]) == 1, "a failed sync exits 1"
+    assert "not answering" in capsys.readouterr().err, "and says why"

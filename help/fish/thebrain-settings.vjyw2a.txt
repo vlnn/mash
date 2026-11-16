@@ -1,0 +1,1 @@
+thebrain settings -> MASH_BRAIN_KEY is the local api key from the app; MASH_BRAIN_ID picks a brain when there are several

@@ -39,6 +39,7 @@ See also [docs/MANUAL.md](docs/MANUAL.md): a task-by-task walkthrough on the sam
 - [The journal](#the-journal)
 - [Forgetting](#forgetting)
 - [Command line](#command-line)
+- [TheBrain](#thebrain)
 - [Alfred](#alfred)
 - [Performance](#performance)
 - [Limitations](#limitations)
@@ -457,6 +458,8 @@ mash add 'work/ k8 ctx -> kubectl config use-context staging'
 mash fill 'ssh {{user=root}}@{{host}}' user=deploy host=10.0.0.1
 mash forget prod web
 mash --resolve weight             prints the chain a rule follows
+mash brain                        the tree as an outline: folders, tags, rules and where they point
+mash brain sync                   mirrors that outline into TheBrain (see TheBrain)
 mash --alfred stg                 Script Filter JSON, what the workflow calls
 mash --act JSON                   performs a row's command (what ↩ runs)
 mash --prompt JSON TYPED          the rows that ask for a blank
@@ -495,6 +498,61 @@ Added to .: k8s pods broken
 ```
 
 Exit status is 0 on a hit, 1 on none, so `mash prod; or echo no` works.
+
+## TheBrain
+
+Search shows a ranked list and never the shape. `mash brain` draws the shape: every folder, every tag, every rule and where it points. `mash brain sync` puts the same picture into [TheBrain](https://thebrain.com), where it can be walked.
+
+```
+mash brain
+mash  ·  53 records · last used 2026-10-21
+  body  ·  4 records · last used 2026-10-20  #body
+    weight  ·  ~> weight kg
+    weight now  ·  => weight kg
+  home  ·  18 records · last used 2026-10-21  #read  #reading
+    chores  ·  3 records · last used 2026-10-20
+    recipes  ·  3 records · last used 2026-10-21
+    net  ·  => wifi
+  work  ·  17 records · last used 2026-10-21  #ml  #reading
+    cli  ·  6 records · last used 2026-10-21
+    k8s  ·  3 records · last used 2026-10-19
+    net  ·  => wifi
+  dashboard  ·  => grafana api latency  ⇢ work
+  latest ml #ml  ·  #> paper  #ml  ⇢ work
+  next chore  ·  ~> home/chores/  ⇢ chores
+  reading now  ·  => #reading  #reading
+```
+
+That is the sample tree in `examples/`. Nothing is sent; it is the plan `sync` would push.
+
+| mash | TheBrain |
+|---|---|
+| node | a thought of type *mash node*, child of its parent folder; the root is `mash`, under the brain's home thought |
+| node's label | records in its subtree and the day one of them was last touched |
+| node's note | its own records, one line each, A to Z |
+| rule | a thought of type *mash rule*, child of its node; label is its arrow and query; note says what it resolves to now and how often it was used |
+| where a rule points | a jump link named after the arrow: to the node its query names, otherwise to the node its best hit lives in. No jump when that is the rule's own node |
+| `#tag` | a tag, spelled with its `#`. It is put on the node whose facts carry it, on a rule that carries it, and on a rule that searches for it |
+| fact | a line in its node's note. With `--facts`, a thought of type *mash fact*: label is the first body line, the note is the body, a URL body is attached as a link, and tags and jumps go to the fact itself |
+
+```
+mash brain sync                   create or update the mirror
+mash brain sync --facts           every fact as a thought too
+mash brain sync --prune           also delete thoughts whose node or record is gone
+```
+
+Setup, once: TheBrain 15 with **Settings > User > Local API** switched on, the app open, and its API key in `MASH_BRAIN_KEY` (`set -Ux MASH_BRAIN_KEY …` in fish).
+
+| setting | default | meaning |
+|---|---|---|
+| `MASH_BRAIN_KEY` | none | the local API key; `sync` refuses without it |
+| `MASH_BRAIN_ID` | the only brain | which brain to mirror into; with several and none chosen, `sync` lists them and stops |
+| `MASH_BRAIN_URL` | `http://localhost:11522`, then `:8001` | the address from the same settings page |
+
+- **One way.** The files stay the source of truth. Renaming or moving a mirrored thought in TheBrain changes nothing in `~/.mash`, and the next sync does not notice.
+- **Repeatable.** `~/.mash/.brain.json` remembers which thought stands for which node or record, by record id, so a second sync sends only what changed: a new head is a rename, a moved file is a relink, and the thought keeps its place and anything you attached to it. An unchanged tree sends nothing.
+- **Careful.** Only thoughts the mirror made are ever touched. Without `--prune` nothing is deleted; `sync` says how many thoughts have lost their record.
+- **Starting over.** Delete the `mash` thought and what hangs under it in TheBrain, and delete `.brain.json`.
 
 ## Alfred
 
@@ -549,6 +607,10 @@ The walk is now most of the keystroke at 20k. If that ever matters, the next ste
 - The time axis is last use, not creation: reading a record through `~>` makes it the newest.
 - Any term ending in `/` before the arrow names a node, wherever it stands: `m https://example.com/` offers to add to a node called `https://example.com`. Drop the trailing slash, or put the URL after `->`.
 - ⌥↩ and `forget` remove the file. There is no undo other than your own history, so `git init` the tree.
+- `mash brain` leaves the built-in manual out, so a rule of yours that points into `help/` shows as resolving to nothing.
+- A rule's jump in TheBrain is where it lands at the time of the sync; it moves on the next one, not when you press ↩.
+- A fact whose URL changed gets the new link attached; the old attachment stays on the thought.
+- `mash brain sync` is written against TheBrain 15's local API as other clients use it and is tested against a stand-in for it, not yet against the app.
 - Plain text: do not store secrets you would not keep in a dotfile.
 
 ## Development
@@ -574,12 +636,14 @@ The Alfred plumbing (the prompt loop through an external trigger, the conditiona
 | `mash/axes.py` | the scope test (subtree, and shipped records only when a node is named) and the ordering: score, then fewer head words, then time in the arrow's direction |
 | `mash/search.py` | one pass over the records: subtree, score, time of last touch → ordered `Hit`s |
 | `mash/resolve.py` | rules: context, best hit, recursion, depth cap, chain |
-| `mash/journal.py` | touches, last-touch lookup, compaction |
+| `mash/journal.py` | touches, last-touch lookup, use counts, compaction |
 | `mash/fill.py` | placeholders and their defaults |
 | `mash/actions.py` | what ↩ does for a body: open, hand off, prompt, copy |
 | `mash/session.py` | `Session`, shared by both surfaces: a `Listing` (folders, hits, *Run*, *Add*) for a box text, resolution and touching, `use`, `add`, `delete`, prompt options |
 | `mash/alfred.py` | renders a `Listing` and a `Prompt` as Script Filter rows, and maps a row's command back onto the `Session` |
-| `mash/cli.py` | `mash`, `-l`, `add`, `fill`, `forget`, `--resolve`, `--alfred`, `--act`, `--prompt` |
+| `mash/brain.py` | the mirror's plan, no network: a snapshot and the journal's uses → `Thought`s and `Link`s; the outline |
+| `mash/brainsync.py` | pushes a plan to TheBrain's local API and remembers it in `.brain.json`: create, retitle, note, relink, prune |
+| `mash/cli.py` | `mash`, `-l`, `add`, `fill`, `forget`, `brain`, `--resolve`, `--alfred`, `--act`, `--prompt` |
 | `run.py` | entry point for Alfred and the fish function |
 | `make_plist.py` | source of `info.plist`: keyword filter → conditional → act or the prompt loop → notification |
 | `scripts/build.py`, `scripts/smoke.py`, `scripts/make_icons.py` | build `dist/alfred-mash.alfredworkflow`; drive it the way Alfred would; draw the icons |

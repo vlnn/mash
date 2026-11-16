@@ -86,3 +86,22 @@ def test_compacts_past_the_threshold(journal, mocker):
 def test_journal_is_a_dotfile(journal):
     journal.touch("a", "copy")
     assert os.path.basename(journal.path).startswith("."), "the journal hides from the tree walk"
+
+
+@pytest.mark.parametrize(
+    "actions, count",
+    [
+        (["add"], 1),
+        (["add", "copy", "paste"], 3),
+        (["touched x4"], 4),
+        (["touched x4", "copy"], 5),
+        (["touched xmany"], 1),
+    ],
+)
+def test_uses_counts_touches_through_compaction(journal, mocker, actions, count):
+    mocker.patch("mash.journal.now", side_effect=range(10, 10 + len(actions)))
+    for action in actions:
+        journal.touch("a", action)
+    assert journal.uses()["a"] == (count, 9.0 + len(actions)), (
+        f"{actions} should count as {count} uses, the last one at the last stamp"
+    )

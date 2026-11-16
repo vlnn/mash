@@ -1,0 +1,1 @@
+mash brain sync -> mirrors that outline into TheBrain as thoughts and links, one way; --facts adds every fact, --prune removes thoughts whose records are gone

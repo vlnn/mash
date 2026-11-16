@@ -1,0 +1,1 @@
+mash brain -> prints your folders, tags and rules as the outline TheBrain would get; nothing is sent

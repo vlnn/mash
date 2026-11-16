@@ -176,6 +176,17 @@ stash k8s pods broken     fish function: stores the previous command under those
 
 Alfred adds the live list, mods, prompts and node rows; fish adds pipes and `$history`. Both go through the same `Session`; Alfred's rows are rendered from what it returns.
 
+## 13. The mirror: the shape, drawn
+
+**For:** seeing the whole tree at once. Search answers "where is it"; nothing above answers "what is here and how is it wired".
+
+```
+mash brain            folders, tags and rules as an indented outline, with where each rule points
+mash brain sync       the same as thoughts and links in TheBrain
+```
+
+A folder is a thought, a tag is a tag, a rule is a thought with a jump link to where its search lands. Facts stay lines in their folder's note unless `--facts` asks for a thought each. It is a projection like the index: one way, rebuilt from the files, safe to throw away. The record id is what lets a renamed or moved record keep its thought.
+
 ---
 
 ## How they work together
@@ -193,6 +204,8 @@ Alfred adds the live list, mods, prompts and node rows; fish adds pipes and `$hi
 **Add × search = the miss is the form.** Because head words are searched while you type an add, you see whether the record exists before you store it, and the folder you named is the folder it lands in. The journal counts the add as a touch, so new things start at the top of the time axis.
 
 **Ids × the journal × files = history that survives editing.** You can reorganise the tree with `mv`, rewrite heads in vim, and the time axis still knows what you used; only the id in the file name has to survive.
+
+**Rules × the mirror = wiring you can see.** `work/net => wifi` and `home/net => wifi` are two thoughts under two folders, each saying in its note what it finds there; `next chore ~> home/chores/` is an arrow from the root into `chores`. What "folders × rules" does is a paragraph above and a picture there.
 
 **Two surfaces × the journal = one memory.** What you press in Alfred reorders what `mash -l` prints in fish, and what you print in fish reorders Alfred's rows.
 
