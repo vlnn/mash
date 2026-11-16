@@ -283,3 +283,67 @@ def test_forget_node_says_what_it_removed(home, capsys, monkeypatch):
     assert "Deleted node: body/ (2 records)" in capsys.readouterr().out, (
         "both surfaces report a node's removal the same way"
     )
+
+
+@pytest.fixture
+def home_with_a_rule_into_the_manual(home):
+    cli.main(["add", "review ~> help/keys/"])
+    return home
+
+
+@pytest.mark.parametrize(
+    "argv, line",
+    [
+        (["brain"], "  review  ·  ~> help/keys/"),
+        (["brain", "--manual"], "  review  ·  ~> help/keys/  ⇢ keys"),
+        (
+            ["brain", "--manual", "--facts"],
+            "      opt-enter delete  ·  deletes the file and its journal lines; there is no undo",
+        ),
+    ],
+)
+def test_brain_manual_brings_the_built_in_help_into_the_plan(
+    home_with_a_rule_into_the_manual, capsys, argv, line
+):
+    capsys.readouterr()
+    cli.main(argv)
+    assert line in capsys.readouterr().out.splitlines(), f"{argv} should print {line!r}"
+
+
+@pytest.mark.parametrize("argv, shown", [(["brain"], False), (["brain", "--manual"], True)])
+def test_brain_shows_the_manuals_folders_only_when_asked(home, capsys, argv, shown):
+    capsys.readouterr()
+    cli.main(argv)
+    lines = capsys.readouterr().out.splitlines()
+    assert any(line.startswith("  help  ·  ") for line in lines) is shown, (
+        f"{argv} should {'show' if shown else 'leave out'} help/"
+    )
+    assert any(line.startswith("    keys  ·  ") for line in lines) is shown, (
+        f"{argv} should {'show' if shown else 'leave out'} help/keys/"
+    )
+
+
+def test_brain_manual_counts_the_manual_in_the_root(home, capsys):
+    from mash.tree import Tree
+
+    shipped = len(Tree("", mounts={"help": cli.MANUAL}).load().records)
+    capsys.readouterr()
+    cli.main(["brain", "--manual"])
+    root = capsys.readouterr().out.splitlines()[0]
+    assert root.startswith(f"mash  ·  {3 + shipped} records"), (
+        "the root counts your three records and every record of the manual"
+    )
+
+
+@pytest.mark.parametrize(
+    "argv, mirrored",
+    [(["brain", "sync"], False), (["brain", "sync", "--manual"], True)],
+)
+def test_brain_sync_mirrors_the_manual_only_when_asked(home, monkeypatch, mocker, argv, mirrored):
+    from mash.brainsync import Report
+
+    monkeypatch.setenv("MASH_BRAIN_KEY", "secret")
+    run = mocker.patch("mash.brainsync.run", return_value=Report(0, 0, 0, 0, 0, 0))
+    cli.main(argv)
+    planned = {thought.key for thought in run.call_args.args[0].thoughts}
+    assert ("node:help" in planned) is mirrored, f"{argv} should plan help/: {mirrored}"

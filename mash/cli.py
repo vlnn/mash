@@ -23,8 +23,8 @@ USAGE = """mash — fuzzy search over a tree of plain-text records
   mash forget WORDS       remove the best-matching record and its history
   mash forget --node N/   remove a node and everything under it
   mash forget --journal WORDS   keep the record, drop its history
-  mash brain [--facts]    show the tree as TheBrain would get it; nothing is sent
-  mash brain sync [--facts] [--prune]   mirror the tree into TheBrain
+  mash brain [--facts] [--manual]   show the tree as TheBrain would get it; nothing is sent
+  mash brain sync [--facts] [--manual] [--prune]   mirror the tree into TheBrain
   mash --alfred TEXT      Script Filter JSON
   mash --act JSON         perform a row's command, print the notification
   mash --prompt JSON TYPED  rows for filling a blank
@@ -164,11 +164,15 @@ def brain_command(argv):
     from mash import brain
 
     uses = Journal(os.path.join(folder(), JOURNAL)).uses()
-    plan = brain.plan(Tree(folder()).load(), uses, facts="--facts" in argv)
+    plan = brain.plan(brain_tree("--manual" in argv).load(), uses, facts="--facts" in argv)
     if "sync" in argv:
         return brain_sync(plan, prune="--prune" in argv)
     print("\n".join(brain.outline(plan)))
     return 0
+
+
+def brain_tree(with_manual):
+    return session().tree if with_manual else Tree(folder())
 
 
 def brain_sync(plan, prune):

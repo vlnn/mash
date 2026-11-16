@@ -185,7 +185,7 @@ mash brain            folders, tags and rules as an indented outline, with where
 mash brain sync       the same as thoughts and links in TheBrain
 ```
 
-A folder is a thought, a tag is a tag, a rule is a thought with a jump link to where its search lands. Facts stay lines in their folder's note unless `--facts` asks for a thought each. It is a projection like the index: one way, rebuilt from the files, safe to throw away. The record id is what lets a renamed or moved record keep its thought.
+A folder is a thought, a tag is a tag, a rule is a thought with a jump link to where its search lands. Facts stay lines in their folder's note unless `--facts` asks for a thought each, and the built-in manual stays out unless `--manual` asks for it. It is a projection like the index: one way, rebuilt from the files, safe to throw away. The record id is what lets a renamed or moved record keep its thought.
 
 ---
 

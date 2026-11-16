@@ -550,6 +550,7 @@ That is the sample tree in `examples/`. Nothing is sent; it is the plan `sync` w
 ```
 mash brain sync                   create or update the mirror
 mash brain sync --facts           every fact as a thought too
+mash brain sync --manual          the built-in manual too, as the help/ node it is mounted at
 mash brain sync --prune           also delete thoughts whose node or record is gone
 ```
 
@@ -563,6 +564,7 @@ Setup, once: TheBrain 15 with **Settings > User > Local API** switched on, the a
 
 - **One way.** The files stay the source of truth. Renaming or moving a mirrored thought in TheBrain changes nothing in `~/.mash`, and the next sync does not notice.
 - **Repeatable.** `~/.mash/.brain.json` remembers which thought stands for which node or record, by record id, so a second sync sends only what changed: a new head is a rename, a moved file is a relink, and the thought keeps its place and anything you attached to it. An unchanged tree sends nothing.
+- **Your tree only, unless asked.** The built-in manual is left out: it is mash's, the same on every install, and more than a hundred records. `--manual` brings it in, on `mash brain` and on `sync` alike: `help/` and its folders become nodes, its rules become thoughts, and a rule of yours that points into `help/` gets its jump. The flags are part of what is mirrored, so sync with the same ones each time; a sync without `--manual` after one with it counts the manual's thoughts as leftovers, and `--prune` then removes them. The same holds for `--facts`.
 - **Careful.** Only thoughts the mirror made are ever touched. Without `--prune` nothing is deleted; `sync` says how many thoughts have lost their record.
 - **Starting over.** Delete the `mash` thought and what hangs under it in TheBrain, and delete `.brain.json`.
 
@@ -619,7 +621,7 @@ The walk is now most of the keystroke at 20k. If that ever matters, the next ste
 - The time axis is last use, not creation: reading a record through `~>` makes it the newest.
 - Any term ending in `/` before the arrow names a node, wherever it stands: `m https://example.com/` offers to add to a node called `https://example.com`. Drop the trailing slash, or put the URL after `->`.
 - ⌥↩ and `forget` remove the file, and on a node the whole folder. There is no undo other than your own history, so `git init` the tree.
-- `mash brain` leaves the built-in manual out, so a rule of yours that points into `help/` shows as resolving to nothing.
+- Without `--manual`, `mash brain` leaves the built-in manual out, so a rule of yours that points into `help/` shows as resolving to nothing.
 - A rule's jump in TheBrain is where it lands at the time of the sync; it moves on the next one, not when you press ↩.
 - A fact whose URL changed gets the new link attached; the old attachment stays on the thought.
 - `mash brain sync` is written against TheBrain 15's local API as other clients use it and is tested against a stand-in for it, not yet against the app.

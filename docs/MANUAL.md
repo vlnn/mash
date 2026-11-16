@@ -550,6 +550,8 @@ ssh root@db.example.com -p 22
 | `mash forget WORDS` | removes the best hit and its history, after showing it and waiting for `y`; if the head was edited meanwhile it reports that and keeps the file (a changed body is not noticed) |
 | `mash forget --journal WORDS` | keeps the record and drops its history |
 | `mash forget --node work/k8s/` | removes a folder and everything under it, after `y`; only a folder mash lists as a node, so not `..` and not a dot-folder |
+| `mash brain` | prints your folders, tags and rules as an indented outline, with where each rule points; `--facts` adds every fact, `--manual` adds this built-in manual under `help/` |
+| `mash brain sync` | mirrors that outline into TheBrain, one way; takes the same two flags, and `--prune` to delete thoughts whose record is gone. Setup is in the README under TheBrain |
 
 `mash WORDS` prints and does nothing else: no clipboard, no browser. `{{date}}` and `{{time}}` come out filled; other blanks are printed as written, and `mash fill` fills them. Because the output is plain text, it pipes:
 
