@@ -9,6 +9,7 @@ FILTER, DECIDE, PROMPT, MORE, REENTER, TRIGGER, ACT, NOTIFY, HOTKEY = (
 )
 IS_PROMPT = "C0ND1710-0000-4000-8000-000000000001"
 HAS_MORE = "C0ND1710-0000-4000-8000-000000000002"
+STASH = "F0B5D1A0-0000-4000-8000-000000000010"
 
 
 def script_filter(uid, script, keyword=None, title="", with_space=True):
@@ -88,6 +89,19 @@ def notification(uid):
             "title": "mash",
         },
         "type": "alfred.workflow.output.notification",
+        "uid": uid,
+        "version": 1,
+    }
+
+
+def stash(uid, variable):
+    return {
+        "config": {
+            "argument": "",
+            "passthroughargument": False,
+            "variables": {variable: "{query}"},
+        },
+        "type": "alfred.workflow.utility.argument",
         "uid": uid,
         "version": 1,
     }
@@ -194,6 +208,7 @@ def plist(version, with_space=True):
                 FILTER, f'{PYTHON} --alfred "$1"', keyword="m", title="mash", with_space=with_space
             ),
             conditional(DECIDE, IS_PROMPT, "prompt", "needs blanks"),
+            stash(STASH, "state"),
             script_filter(PROMPT, f'{PYTHON} --prompt "$state" "$1"', title="fill a blank"),
             conditional(MORE, HAS_MORE, "more", "more blanks"),
             call_external_trigger(REENTER, "prompt"),
@@ -204,10 +219,11 @@ def plist(version, with_space=True):
         "connections": {
             HOTKEY: [link(FILTER)],
             FILTER: [link(DECIDE)],
-            DECIDE: [link(PROMPT, IS_PROMPT), link(ACT)],
+            DECIDE: [link(STASH, IS_PROMPT), link(ACT)],
+            STASH: [link(PROMPT)],
             PROMPT: [link(MORE)],
             MORE: [link(REENTER, HAS_MORE), link(ACT)],
-            TRIGGER: [link(PROMPT)],
+            TRIGGER: [link(STASH)],
             ACT: [link(NOTIFY)],
         },
         "uidata": {
@@ -216,9 +232,10 @@ def plist(version, with_space=True):
                 (HOTKEY, 0, 0),
                 (FILTER, 1, 0),
                 (DECIDE, 2, 0),
-                (PROMPT, 3, 1),
-                (MORE, 4, 1),
-                (REENTER, 5, 1),
+                (STASH, 3, 1),
+                (PROMPT, 4, 1),
+                (MORE, 5, 1),
+                (REENTER, 6, 1),
                 (TRIGGER, 2, 1),
                 (ACT, 5, 0),
                 (NOTIFY, 6, 0),

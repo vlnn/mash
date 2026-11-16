@@ -625,7 +625,7 @@ make check          build, then drive the bundle's scripts the way Alfred would
 make bench
 ```
 
-The Alfred plumbing (the prompt loop through an external trigger, the conditional on the `prompt` variable, mods) is generated and structurally tested but has not yet been clicked through in Alfred itself; that is the first thing to do on a Mac.
+The Alfred plumbing (the prompt loop through an external trigger, the Arg and Vars step that keeps a row's command in `state`, the conditional on the `prompt` variable, mods) is generated and structurally tested but has not yet been clicked through in Alfred itself; that is the first thing to do on a Mac.
 
 | path | responsibility |
 |---|---|
@@ -645,7 +645,7 @@ The Alfred plumbing (the prompt loop through an external trigger, the conditiona
 | `mash/brainsync.py` | pushes a plan to TheBrain's local API and remembers it in `.brain.json`: create, retitle, note, relink, prune |
 | `mash/cli.py` | `mash`, `-l`, `add`, `fill`, `forget`, `brain`, `--resolve`, `--alfred`, `--act`, `--prompt` |
 | `run.py` | entry point for Alfred and the fish function |
-| `make_plist.py` | source of `info.plist`: keyword filter → conditional → act or the prompt loop → notification |
+| `make_plist.py` | source of `info.plist`: keyword filter → conditional → act, or stash the command in `state` → the prompt loop → notification |
 | `scripts/build.py`, `scripts/smoke.py`, `scripts/make_icons.py` | build `dist/alfred-mash.alfredworkflow`; drive it the way Alfred would; draw the icons |
 | `fish/` | the `mash` and `stash` functions |
 | `bench.py` | per-keystroke latency, `--stress` |

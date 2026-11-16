@@ -29,7 +29,37 @@ def test_prompt_loop_goes_through_the_external_trigger():
         objects[make_plist.TRIGGER]["config"]["triggerid"]
         == objects[make_plist.REENTER]["config"]["triggerid"]
     )
-    assert plist["connections"][make_plist.TRIGGER] == [make_plist.link(make_plist.PROMPT)]
+    assert plist["connections"][make_plist.TRIGGER] == [make_plist.link(make_plist.STASH)]
+
+
+def test_the_prompt_filter_reads_its_command_from_the_state_variable():
+    plist = make_plist.plist("0.0.0")
+    objects = {o["uid"]: o for o in plist["objects"]}
+    stash = objects[make_plist.STASH]
+    assert stash["type"] == "alfred.workflow.utility.argument", "an Arg and Vars utility"
+    assert stash["config"]["variables"] == {"state": "{query}"}, (
+        "the command a row sends is kept in the variable the prompt script reads as $state"
+    )
+    assert (stash["config"]["argument"], stash["config"]["passthroughargument"]) == ("", False), (
+        "and is cleared from the query, so the box opens empty for typing"
+    )
+    assert '"$state" "$1"' in objects[make_plist.PROMPT]["config"]["script"], (
+        "the prompt script takes the command from state and the typed text from the query"
+    )
+
+
+def test_both_ways_into_the_prompt_go_through_the_stash():
+    connections = make_plist.plist("0.0.0")["connections"]
+    first = next(c for c in connections[make_plist.DECIDE] if "sourceoutputuid" in c)
+    assert first["destinationuid"] == make_plist.STASH, (
+        "a row that needs a step stashes its command"
+    )
+    assert connections[make_plist.TRIGGER] == [make_plist.link(make_plist.STASH)], (
+        "and so does every further step, re-entering through the trigger"
+    )
+    assert connections[make_plist.STASH] == [make_plist.link(make_plist.PROMPT)], (
+        "only then does the prompt filter open"
+    )
 
 
 def test_keyword_needs_a_space_unless_asked_otherwise():
