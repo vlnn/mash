@@ -265,3 +265,128 @@ def test_act_run_acts_on_the_text_without_storing(home, mocker):
     alfred.act(home, {"do": "run", "text": "delany @kobold"})
     assert perform.call_args[0][0].kind == "handoff"
     assert titles(items(home, "kobold")) == ["Add: kobold"], "nothing was stored"
+
+
+def node_item(session, text, title):
+    return next(item for item in items(session, text)["items"] if item["title"] == title)
+
+
+@pytest.mark.parametrize(
+    "text, title, node",
+    [("", "body/", "body"), ("", "work/", "work"), ("work/", "work/k8s/", "work/k8s")],
+)
+def test_opt_enter_on_a_node_row_asks_to_delete_it(home, text, title, node):
+    alt = node_item(home, text, title)["mods"]["alt"]
+    assert json.loads(alt["arg"]) == {"do": "prompt", "ask": "forget_node", "node": node}, (
+        f"⌥↩ on {title} should open the confirm step for {node}"
+    )
+    assert alt["valid"] is True, "the mod acts although the row itself only completes"
+    assert alt["variables"] == {"prompt": "1"}, "and it goes through the prompt filter, not to act"
+    assert alt["subtitle"] == f"Delete {title} and everything in it: asks first", (
+        "holding ⌥ should say what ↩ would start"
+    )
+
+
+def test_a_node_row_still_only_completes_on_plain_enter(home):
+    row = node_item(home, "", "work/")
+    assert row["valid"] is False and "arg" not in row, "↩ on a folder walks in, it does not act"
+
+
+@pytest.mark.parametrize(
+    "node, question",
+    [
+        ("body", "Delete body/ and its 2 records"),
+        ("work", "Delete work/ and its 1 record"),
+        ("work/k8s", "Delete work/k8s/ and its 1 record"),
+        ("spare", "Delete spare/, which is empty"),
+    ],
+)
+def test_the_confirm_step_offers_keeping_first_then_deleting(home, node, question):
+    os.makedirs(os.path.join(home.tree.root, "spare"))
+    asked = alfred.prompt(home, {"do": "prompt", "ask": "forget_node", "node": node}, "")["items"]
+    assert [item["title"] for item in asked] == [f"Keep {node}/", question], (
+        "a second ↩ should be harmless; deleting takes ↓ first"
+    )
+    assert [json.loads(item["arg"]) for item in asked] == [
+        {"do": "nothing"},
+        {"do": "forget_node", "node": node},
+    ], "each answer carries what act should do"
+    assert [item["variables"] for item in asked] == [{"more": "0"}] * 2, (
+        "either answer ends the prompt loop"
+    )
+
+
+def test_the_delete_answer_warns_that_it_cannot_be_undone(home):
+    asked = alfred.prompt(home, {"do": "prompt", "ask": "forget_node", "node": "body"}, "")
+    assert "no undo" in asked["items"][1]["subtitle"], "the last thing read before ↩ is the warning"
+
+
+@pytest.mark.parametrize("typed", ["", "y", "body", "anything at all"])
+def test_typing_in_the_confirm_step_changes_nothing(home, typed):
+    command = {"do": "prompt", "ask": "forget_node", "node": "body"}
+    assert alfred.prompt(home, command, typed) == alfred.prompt(home, command, ""), (
+        f"{typed!r} is not an answer; the two rows are"
+    )
+
+
+@pytest.mark.parametrize("node", ["nowhere", "", "..", ".git", "body/../work"])
+def test_the_confirm_step_offers_no_delete_for_what_is_not_a_node(home, node):
+    os.makedirs(os.path.join(home.tree.root, ".git"))
+    asked = alfred.prompt(home, {"do": "prompt", "ask": "forget_node", "node": node}, "")["items"]
+    assert [json.loads(item["arg"]) for item in asked] == [{"do": "nothing"}], (
+        f"{node!r} is not one of the tree's folders, so there is nothing to confirm"
+    )
+
+
+@pytest.mark.parametrize(
+    "node, message, gone, kept",
+    [
+        ("body", "Deleted node: body/ (2 records)", ["body"], ["work/k8s"]),
+        ("work", "Deleted node: work/ (1 record)", ["work", "work/k8s"], ["body"]),
+        ("work/k8s", "Deleted node: work/k8s/ (1 record)", ["work/k8s"], ["work", "body"]),
+    ],
+)
+def test_act_forget_node_removes_the_folder_and_everything_under_it(
+    home, node, message, gone, kept
+):
+    assert alfred.act(home, {"do": "forget_node", "node": node}) == message, "act says what went"
+    left = home.tree.load().folders
+    assert not set(gone) & set(left), f"{gone} should be gone"
+    assert set(kept) <= set(left), f"{kept} should be untouched"
+    assert len(home.tree.load().records) == 7 - int(message.split("(")[1].split()[0]), (
+        "only that node's records go"
+    )
+
+
+def test_act_forget_node_drops_the_journal_lines_under_it(home):
+    inside = next(s for s in home.tree.load().records if s.node == "work/k8s")
+    outside = next(s for s in home.tree.load().records if s.node == "body")
+    home.touch_chain([inside, outside], "copy")
+    alfred.act(home, {"do": "forget_node", "node": "work"})
+    touched = home.journal.touched()
+    assert inside.identity not in touched, "history under the node goes with it"
+    assert outside.identity in touched, "history elsewhere stays"
+
+
+@pytest.mark.parametrize(
+    "node, message",
+    [
+        ("nowhere", "Not deleted: there is no node nowhere/"),
+        ("", "Not deleted: there is no node /"),
+        ("..", "Not deleted: there is no node ../"),
+        (".git", "Not deleted: there is no node .git/"),
+        ("body/../work", "Not deleted: there is no node body/../work/"),
+    ],
+)
+def test_act_forget_node_refuses_what_is_not_a_node(home, node, message):
+    os.makedirs(os.path.join(home.tree.root, ".git"))
+    home.tree.load()
+    before = sorted(os.listdir(home.tree.root))
+    assert alfred.act(home, {"do": "forget_node", "node": node}) == message, "act says why not"
+    assert sorted(os.listdir(home.tree.root)) == before, "and the tree is as it was"
+
+
+def test_act_nothing_does_nothing_and_says_nothing(home):
+    before = home.tree.load()
+    assert alfred.act(home, {"do": "nothing"}) == "", "keeping needs no notification"
+    assert home.tree.load() == before, "and changes nothing"

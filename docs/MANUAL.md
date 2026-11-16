@@ -297,6 +297,7 @@ The other keys work on record rows:
 | ⇧↩ | copy and paste into the frontmost app |
 | ⌘↩ | open the record's file in your editor |
 | ⌥↩ | delete the record and its history |
+| ⌥↩ on a folder row | ask, then delete the folder, everything under it and its history |
 | ⌃ (hold) | show the record's file, and what ↩ will do |
 | ⌘C | copy the body as written, blanks unfilled |
 | ⌘L | show the body in Large Type |
@@ -332,6 +333,8 @@ The Alfred box is one line, so `;;` stands for a newline there: `m release notes
 ⌘↩ opens the record's file in your editor. The file is the record: change the head, the arrow or the body and save. To move a record, move the file; to rename a folder, rename it.
 
 ⌥↩ deletes the file as it is at that moment, and the record's journal lines. There is no undo, which is one more reason to `git init` the tree. In fish, `mash forget` does the same after asking (see [In the terminal](#in-the-terminal)).
+
+⌥↩ on a folder row deletes the whole node, so it asks first. The box shows two rows: `Keep work/k8s/` on top and `Delete work/k8s/ and its 3 records` below it. A second ↩ therefore keeps the folder; ↓ ↩ removes it, with every record and subfolder under it and their history. Esc keeps it as well. There is no undo here either. This is also how to clear an empty folder: its row reads `Delete spare/, which is empty`.
 
 ### Folders
 
@@ -495,7 +498,7 @@ mash carries a short version of this manual as records of its own, under the nod
 Three things set it apart from your own records:
 
 - **It stays out of the way.** A bare `m`, an ordinary search, `mash -l` and your rules never see it. Naming `help/` is what brings it in.
-- **It is read-only.** ⌥↩ is switched off on its rows, and `mash forget` refuses. If you add under `help/`, the record goes into your own tree and is yours.
+- **It is read-only.** ⌥↩ is switched off on its rows and its folders, and `mash forget` refuses. If you add under `help/`, the record goes into your own tree and is yours.
 - **It is otherwise ordinary.** ↩ copies an entry, ⌘L shows it large, using one moves it up, and a rule of yours can point at it: `review ~> help/keys/`.
 
 **Learning it.** `help/` holds one rule, `quiz ~> help/`, a [queue](#rules) over the whole manual. `m help/ quiz` ↩ shows the entry you have gone longest without seeing, as `quiz → tilde in an arrow → reverses time: least recently touched first`, and sends it to the back. In fish you can have the question before the answer, because `--resolve` shows where the rule leads without using it:
@@ -546,7 +549,7 @@ ssh root@db.example.com -p 22
 | `mash --resolve WORDS` | prints the chain a rule would follow, without using anything |
 | `mash forget WORDS` | removes the best hit and its history, after showing it and waiting for `y`; if the head was edited meanwhile it reports that and keeps the file (a changed body is not noticed) |
 | `mash forget --journal WORDS` | keeps the record and drops its history |
-| `mash forget --node work/k8s/` | removes a folder and everything under it, after `y` |
+| `mash forget --node work/k8s/` | removes a folder and everything under it, after `y`; only a folder mash lists as a node, so not `..` and not a dot-folder |
 
 `mash WORDS` prints and does nothing else: no clipboard, no browser. `{{date}}` and `{{time}}` come out filled; other blanks are printed as written, and `mash fill` fills them. Because the output is plain text, it pipes:
 

@@ -77,7 +77,7 @@ mash help/ tilde        the same from fish: reverses time: least recently touche
 
 - Manual records are found **only when the query names `help/`**. A bare `m`, `m delete`, `mash -l` and your own rules see your records and nothing else. `help/` itself shows once, as a folder row on a bare `m`, which is also the first thing a new install lists.
 - In every other way they are records: ↩ copies, ⌘L shows Large Type, a touch goes to your journal under the record's id, and a rule of yours may point at them (`review ~> help/keys/`).
-- The mount is read-only. ⌥↩ is switched off on its rows and `mash forget` refuses without asking. Adding under `help/` writes to your own tree (`~/.mash/help/`); such a record is yours, found everywhere and deletable.
+- The mount is read-only. ⌥↩ is switched off on its rows, folder rows included, and `mash forget` refuses without asking. Adding under `help/` writes to your own tree (`~/.mash/help/`); such a record is yours, found everywhere and deletable.
 - Every shipped fact copies on ↩: none opens or hands off, and every blank has a default. That keeps `quiz ~> help/` going round without a stall. `tests/test_help.py` checks each record, and that the bundle carries all of them.
 
 ## The tree
@@ -318,7 +318,7 @@ m work/ k8s/ ctx         the same: node terms in a row compose into one path
 m wo                     the node row  work/  ·  then matching records everywhere
 ```
 
-An empty query lists the current node's folders first (the root's on a bare `m`, `work/`'s inside `work/`), empty ones included, then the records. A node row has the 📁 icon and says how many records its subtree holds; ↩ or ⇥ on it puts `work/` into the query. Backspace over the slash to leave. Siblings and ancestors are never searched when a node is named: `work/k8s/ ctx` does not see a `ctx` in `work/`. Nothing shadows anything; if both match a wider query, both show, the better score first.
+An empty query lists the current node's folders first (the root's on a bare `m`, `work/`'s inside `work/`), empty ones included, then the records. A node row has the 📁 icon and says how many records its subtree holds; ↩ or ⇥ on it puts `work/` into the query, and ⌥↩ asks whether to delete the node (see [Forgetting](#forgetting)). Backspace over the slash to leave. Siblings and ancestors are never searched when a node is named: `work/k8s/ ctx` does not see a `ctx` in `work/`. Nothing shadows anything; if both match a wider query, both show, the better score first.
 
 ## Resolving rules
 
@@ -398,6 +398,7 @@ Whatever ↩ does, the value is also *shown*: Alfred posts it as a notification,
 | ⇧↩ | copy and paste into the frontmost app |
 | ⌘↩ | open the record's file in your editor |
 | ⌥↩ | delete the record (and its journal lines); switched off on `help/` rows |
+| ⌥↩ on a folder row | ask, then delete the node: its folder, everything under it and every journal line under it; switched off on the manual's folders |
 | ⌃ (hold) | the record's file and what ↩ will do; for a rule, its arrow and query |
 | ⌘C | copy the body as written, placeholders unfilled |
 | ⌘L | large type |
@@ -432,7 +433,7 @@ Two ideas are parked here on purpose, to revisit once rules work: a record whose
 
 ## Forgetting
 
-Removal is a command, not a keystroke, except ⌥↩ which does the same for one record:
+Removal is a command, not a keystroke, except ⌥↩, which does the same for one record, or for one node after asking:
 
 ```
 mash forget prod web            removes the best-matching record and its journal lines, after confirming
@@ -441,6 +442,17 @@ mash forget --journal prod web  keeps the record, drops its history (it becomes 
 ```
 
 `forget` prints what it is about to remove and waits for `y`. Before deleting, the file's head is compared with what the search saw, so a record whose head was edited while it waited is reported and kept; a changed body is not noticed. ⌥↩ has no such check: it deletes the file as it is at that moment. Neither removes a `help/` record.
+
+A node is too much to lose to one keystroke, so ⌥↩ on a folder row asks first. The box lists two answers:
+
+```
+Keep work/k8s/                             nothing is deleted
+Delete work/k8s/ and its 3 records         the folder, everything under it and its history; no undo
+```
+
+Keeping is the top row, so a second ↩ out of habit does nothing; deleting takes ↓ ↩. Typing in that box changes nothing, and Esc keeps the node too. An empty node reads `Delete spare/, which is empty`, which is the way to clear a folder left behind when its last record went.
+
+Only a folder of your own tree that mash lists as a node can be removed, by the key or by `forget --node`: not the manual's `help/` folders, not `..`, not a dot-folder such as `.git`. A folder of yours under `help/` is yours; deleting it counts and removes only your records, and the manual stays.
 
 ## Command line
 
@@ -606,7 +618,7 @@ The walk is now most of the keystroke at 20k. If that ever matters, the next ste
 - A rule cannot prompt: blanks in the fact it reaches take their defaults, and a blank without one stops the ↩.
 - The time axis is last use, not creation: reading a record through `~>` makes it the newest.
 - Any term ending in `/` before the arrow names a node, wherever it stands: `m https://example.com/` offers to add to a node called `https://example.com`. Drop the trailing slash, or put the URL after `->`.
-- ⌥↩ and `forget` remove the file. There is no undo other than your own history, so `git init` the tree.
+- ⌥↩ and `forget` remove the file, and on a node the whole folder. There is no undo other than your own history, so `git init` the tree.
 - `mash brain` leaves the built-in manual out, so a rule of yours that points into `help/` shows as resolving to nothing.
 - A rule's jump in TheBrain is where it lands at the time of the sync; it moves on the next one, not when you press ↩.
 - A fact whose URL changed gets the new link attached; the old attachment stays on the thought.

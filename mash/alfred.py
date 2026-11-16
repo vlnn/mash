@@ -4,12 +4,16 @@ import os
 from mash import actions, fill
 
 NODE_ICON = {"path": "node.png"}
+SHIPPED = "Part of mash's manual: cannot be deleted"
+FORGET_NODE = "forget_node"
+NOTHING = {"do": "nothing"}
+ENDS_THE_LOOP = {"more": "0"}
 ADD_ICON = {"path": "add.png"}
 
 
 def items(session, text):
     listing = session.listing(text)
-    rows = [node_row(node, count) for node, count in listing.folders]
+    rows = [node_row(session, node, count) for node, count in listing.folders]
     rows += [row(session, hit.stored) for hit in listing.hits]
     if listing.query.add:
         rows.insert(0, add_row(listing.add))
@@ -22,6 +26,10 @@ def items(session, text):
 
 def act(session, command):
     do = command["do"]
+    if do == "nothing":
+        return ""
+    if do == FORGET_NODE:
+        return session.forget_node(command["node"])
     if do == "add":
         return session.add(command["node"], command["text"])
     if do == "run":
@@ -36,6 +44,8 @@ def act(session, command):
 
 
 def prompt(session, command, typed):
+    if command.get("ask") == FORGET_NODE:
+        return {"items": confirm_rows(session, command["node"])}
     stored = session.tree.read(command["path"])
     asked = session.prompt(stored, command.get("values", {}), typed)
     return {"items": [prompt_row(command, asked, option) for option in asked.options]}
@@ -71,9 +81,35 @@ def row(session, stored):
     }
 
 
+def confirm_rows(session, node):
+    keep = {
+        "title": f"Keep {node}/",
+        "subtitle": "Nothing is deleted",
+        "arg": dumps(NOTHING),
+        "variables": ENDS_THE_LOOP,
+        "icon": NODE_ICON,
+    }
+    return [keep, delete_row(node, session.node_size(node))] if session.owns_node(node) else [keep]
+
+
+def delete_row(node, size):
+    return {
+        "title": f"Delete {node}/{contents(size)}",
+        "subtitle": "The folder, everything under it and its history. There is no undo",
+        "arg": dumps({"do": FORGET_NODE, "node": node}),
+        "variables": ENDS_THE_LOOP,
+    }
+
+
+def contents(size):
+    if size == 0:
+        return ", which is empty"
+    return f" and its {size} record{'s' * (size != 1)}"
+
+
 def delete_mod(stored):
     if stored.shipped:
-        return {"valid": False, "subtitle": "Part of mash's manual: cannot be deleted"}
+        return {"valid": False, "subtitle": SHIPPED}
     return {"arg": dumps(act_command(stored.path, "delete")), "subtitle": "Delete this record"}
 
 
@@ -101,7 +137,7 @@ def describe(session, record):
     return first_line
 
 
-def node_row(node, count):
+def node_row(session, node, count):
     plural = "record" if count == 1 else "records"
     return {
         "title": f"{node}/",
@@ -109,6 +145,18 @@ def node_row(node, count):
         "autocomplete": f"{node}/ ",
         "valid": False,
         "icon": NODE_ICON,
+        "mods": {"alt": delete_node_mod(session, node)},
+    }
+
+
+def delete_node_mod(session, node):
+    if not session.tree.owns(node):
+        return {"valid": False, "subtitle": SHIPPED}
+    return {
+        "valid": True,
+        "arg": dumps({"do": "prompt", "ask": FORGET_NODE, "node": node}),
+        "subtitle": f"Delete {node}/ and everything in it: asks first",
+        "variables": {"prompt": "1"},
     }
 
 

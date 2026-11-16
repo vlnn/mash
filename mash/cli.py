@@ -149,18 +149,13 @@ def forget(argv):
 
 
 def forget_node(current, node):
-    import shutil
-
-    path = os.path.join(current.tree.root, *node.split("/"))
-    if not os.path.isdir(path):
+    if not current.owns_node(node):
         print(f"no node {node}/", file=sys.stderr)
         return 1
-    count = current.tree.load().folders.get(node, 0)
-    if not confirm(f"remove {node}/ with {count} records ({path})"):
+    size, path = current.node_size(node), current.tree.own_folder(node)
+    if not confirm(f"remove {node}/ with {size} records ({path})"):
         return 1
-    shutil.rmtree(path)
-    current.journal.forget_node(node)
-    print(f"Removed node: {node}/")
+    print(current.forget_node(node))
     return 0
 
 
@@ -206,7 +201,9 @@ def alfred_items(argv):
 
 @command("--act")
 def alfred_act(argv):
-    print(alfred.act(session(), json.loads(argv[0])))
+    message = alfred.act(session(), json.loads(argv[0]))
+    if message:
+        print(message)
     return 0
 
 

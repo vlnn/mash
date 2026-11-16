@@ -208,3 +208,44 @@ def test_a_queue_over_the_mount_never_hands_out_itself(home):
     assert set(served) == {"start here", "enter key", "shift enter key", "newest"}, (
         "four presses hand out the four other shipped records"
     )
+
+
+def node_row(session, text, title):
+    return next(i for i in alfred.items(session, text)["items"] if i["title"] == title)
+
+
+@pytest.mark.parametrize("text, title", [("", "help/"), ("help/", "help/keys/")])
+def test_opt_enter_is_switched_off_on_the_manuals_folders(home, text, title):
+    alt = node_row(home, text, title)["mods"]["alt"]
+    assert alt == {"valid": False, "subtitle": "Part of mash's manual: cannot be deleted"}, (
+        f"{title} is shipped, so ⌥↩ should say so and do nothing"
+    )
+
+
+@pytest.mark.parametrize("node", ["help", "help/keys"])
+def test_a_manual_folder_cannot_be_deleted_by_a_made_up_command(home, manual, node):
+    asked = alfred.prompt(home, {"do": "prompt", "ask": "forget_node", "node": node}, "")["items"]
+    assert len(asked) == 1, "the confirm step offers only to keep it"
+    assert alfred.act(home, {"do": "forget_node", "node": node}) == (
+        f"Not deleted: {node}/ is part of mash's manual"
+    ), "and act refuses"
+    assert len(Tree(manual).load().records) == len(SHIPPED), "the manual is untouched"
+
+
+def test_your_own_folder_under_help_is_yours_to_delete(home, manual):
+    home.tree.add("help/mine", from_box("my note -> mine"))
+    assert node_row(home, "help/", "help/mine/")["mods"]["alt"]["valid"] is True, (
+        "a folder in your own tree is deletable even under help/"
+    )
+    assert alfred.act(home, {"do": "forget_node", "node": "help/mine"}) == (
+        "Deleted node: help/mine/ (1 record)"
+    ), "and deleting it counts only your record"
+    assert len(Tree(manual).load().records) == len(SHIPPED), "the manual is untouched"
+
+
+def test_deleting_your_help_folder_leaves_the_manual_mounted(home, manual):
+    home.tree.add("help", from_box("my tip -> mine"))
+    assert alfred.act(home, {"do": "forget_node", "node": "help"}) == (
+        "Deleted node: help/ (1 record)"
+    ), "only your own record under help/ is counted and removed"
+    assert "help" in home.tree.load().folders, "the manual still shows as help/"

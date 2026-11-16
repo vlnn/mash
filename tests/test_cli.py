@@ -251,3 +251,35 @@ def test_brain_sync_reports_a_failure_and_exits_one(home, monkeypatch, mocker, c
     mocker.patch("mash.brainsync.run", side_effect=BrainError("TheBrain is not answering"))
     assert cli.main(["brain", "sync"]) == 1, "a failed sync exits 1"
     assert "not answering" in capsys.readouterr().err, "and says why"
+
+
+def test_act_prints_nothing_when_there_is_nothing_to_say(home, capsys):
+    capsys.readouterr()
+    assert cli.main(["--act", json.dumps({"do": "nothing"})]) == 0, "keeping a node is a success"
+    assert capsys.readouterr().out == "", "an empty output is what keeps Alfred from notifying"
+
+
+def test_prompt_serves_the_confirm_step(home, capsys):
+    capsys.readouterr()
+    cli.main(["--prompt", json.dumps({"do": "prompt", "ask": "forget_node", "node": "body"}), ""])
+    titles = [item["title"] for item in json.loads(capsys.readouterr().out)["items"]]
+    assert titles == ["Keep body/", "Delete body/ and its 2 records"], (
+        "the prompt filter should list the two answers"
+    )
+
+
+@pytest.mark.parametrize("node", [".git", "..", "nowhere"])
+def test_forget_node_refuses_a_folder_that_is_not_a_node(home, capsys, monkeypatch, node):
+    (home / ".git").mkdir()
+    monkeypatch.setattr("sys.stdin", __import__("io").StringIO("y\n"))
+    assert cli.main(["forget", "--node", node]) == 1, f"{node} is not a node"
+    assert f"no node {node}/" in capsys.readouterr().err, "and the message says so"
+    assert (home / ".git").exists() and home.exists(), "nothing is removed"
+
+
+def test_forget_node_says_what_it_removed(home, capsys, monkeypatch):
+    monkeypatch.setattr("sys.stdin", __import__("io").StringIO("y\n"))
+    cli.main(["forget", "--node", "body/"])
+    assert "Deleted node: body/ (2 records)" in capsys.readouterr().out, (
+        "both surfaces report a node's removal the same way"
+    )

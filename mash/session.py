@@ -1,7 +1,7 @@
 import os
 from typing import NamedTuple, Optional
 
-from mash import actions, fill, resolve, search
+from mash import actions, axes, fill, resolve, search
 from mash import query as queries
 from mash import records as record_grammar
 
@@ -129,6 +129,21 @@ class Session:
         self.journal.forget(stored.identity)
         return f"Deleted: {stored.record.head}"
 
+    def owns_node(self, node):
+        return node in self.tree.load().folders and self.tree.owns(node)
+
+    def node_size(self, node):
+        records = self.tree.load().records
+        return sum(1 for s in records if not s.shipped and axes.in_subtree(node, s))
+
+    def forget_node(self, node):
+        if not self.owns_node(node):
+            return f"Not deleted: {why_not_a_node(node, self.tree)}"
+        size = counted(self.node_size(node))
+        self.tree.remove_node(node)
+        self.journal.forget_node(node)
+        return f"Deleted node: {node}/ ({size})"
+
     def forget_history(self, stored):
         self.journal.forget(stored.identity)
         return f"Forgot history of: {stored.record.head}"
@@ -144,6 +159,16 @@ class Session:
             for choice in dict.fromkeys(c for c in (typed, default, read_clipboard().strip()) if c)
         ]
         return Prompt(name, total - len(pending) + 1, total, options)
+
+
+def why_not_a_node(node, tree):
+    if node in tree.load().folders:
+        return f"{node}/ is part of mash's manual"
+    return f"there is no node {node}/"
+
+
+def counted(records):
+    return f"{records} record{'s' * (records != 1)}"
 
 
 def twin_of(stored_records, node, record):

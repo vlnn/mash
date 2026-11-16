@@ -1,0 +1,1 @@
+opt-enter on a folder -> asks first: keep is the top row, so a second enter is harmless; the row below removes the folder, everything under it and its history for good

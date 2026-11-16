@@ -154,7 +154,7 @@ Consequence to know: resolving `weight ~>` touches the oldest weight, so immedia
 | a rule | resolves, then one of the above on what it reaches |
 | anything else | copies, and shows it |
 
-⇧↩ pastes, ⌘↩ opens the file in your editor, ⌥↩ deletes, ⌃ shows the file and the chain. A shell one-liner is never run by ↩.
+⇧↩ pastes, ⌘↩ opens the file in your editor, ⌥↩ deletes (a record at once, a folder after asking), ⌃ shows the file and the chain. A shell one-liner is never run by ↩.
 
 ## 11. The index: speed without giving up files
 

@@ -1,5 +1,6 @@
 import os
 import pickle
+import shutil
 from typing import NamedTuple
 
 from mash import records
@@ -105,6 +106,15 @@ class Tree:
         if current.record.head != stored.record.head:
             raise LookupError(f"{stored.path} no longer holds {stored.record.head!r}")
         os.remove(stored.path)
+
+    def own_folder(self, node):
+        return os.path.join(self.root, *node.split("/"))
+
+    def owns(self, node):
+        return bool(node) and os.path.isdir(self.own_folder(node))
+
+    def remove_node(self, node):
+        shutil.rmtree(self.own_folder(node))
 
     def node_of(self, path):
         name, base = self.mount_of(path) or ("", self.root)
